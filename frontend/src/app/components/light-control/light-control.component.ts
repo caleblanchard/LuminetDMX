@@ -771,7 +771,7 @@ export class LightControlComponent implements OnInit, OnDestroy {
 
     // Update all channels for this parameter
     const channelUpdates = param.channels.map(channel => ({
-      channel: channel.channelNumber + 1,
+      channel: channel.channelNumber,
       value: value
     }));
 
@@ -811,7 +811,7 @@ export class LightControlComponent implements OnInit, OnDestroy {
 
       param.channels.forEach(channel => {
         updates.push({
-          channel: channel.channelNumber + 1,
+          channel: channel.channelNumber,
           value: value
         });
       });
