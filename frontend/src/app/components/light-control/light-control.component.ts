@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { WebsocketService } from '../../services/websocket.service';
-import { Patch, FixtureTemplate, FixtureChannel, Preset, PresetChannelValue } from '../../models/fixture.model';
+import { Patch, FixtureTemplate, FixtureChannel, Preset, PresetChannelValue, Group } from '../../models/fixture.model';
 import { Subscription } from 'rxjs';
 
 interface LightControl {
@@ -44,6 +44,19 @@ interface ColorControl {
           <button class="btn btn-secondary" (click)="selectAll()">Select All</button>
           <button class="btn btn-secondary" (click)="clearSelection()">Clear All</button>
           <span class="selection-count">{{ getSelectedCount() }} selected</span>
+        </div>
+      </div>
+
+      <!-- Groups Row -->
+      <div class="groups-row" *ngIf="groups.length > 0">
+        <div class="group-chip"
+             *ngFor="let group of groups"
+             (click)="toggleGroup(group)"
+             [class.selected]="isGroupFullySelected(group)"
+             [title]="group.patchIds.length + ' fixtures'">
+          <span class="group-color" [style.background-color]="group.color"></span>
+          <span class="group-name">{{ group.name }}</span>
+          <span class="group-count">{{ group.patchIds.length }}</span>
         </div>
       </div>
 
@@ -214,6 +227,58 @@ interface ColorControl {
       margin-bottom: 24px;
       padding: 20px 0 16px 0;
       border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .groups-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .group-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .group-chip:hover {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .group-chip.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: #3b82f6;
+      color: #e2e8f0;
+    }
+
+    .group-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .group-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .group-count {
+      font-size: 12px;
+      color: #94a3b8;
+      background: rgba(148, 163, 184, 0.15);
+      padding: 2px 6px;
+      border-radius: 999px;
     }
 
     .header-controls {
@@ -555,6 +620,7 @@ export class LightControlComponent implements OnInit, OnDestroy {
   lights: LightControl[] = [];
   patches: Patch[] = [];
   templates: FixtureTemplate[] = [];
+  groups: Group[] = [];
   commonParameters: CommonParameter[] = [];
   colorControl: ColorControl = { red: 0, green: 0, blue: 0 };
   showPresetModal = false;
@@ -587,6 +653,10 @@ export class LightControlComponent implements OnInit, OnDestroy {
     this.apiService.getFixtureTemplates().subscribe(templates => {
       this.templates = templates;
       this.buildLightControls();
+    });
+
+    this.apiService.getGroups().subscribe(groups => {
+      this.groups = groups;
     });
   }
 
@@ -628,6 +698,26 @@ export class LightControlComponent implements OnInit, OnDestroy {
   clearSelection(): void {
     this.lights.forEach(light => light.selected = false);
     this.updateCommonParameters();
+  }
+
+  toggleGroup(group: Group): void {
+    const groupLightIds = new Set(group.patchIds);
+    const allSelected = this.lights
+      .filter(l => groupLightIds.has(l.patch.id))
+      .every(l => l.selected);
+
+    this.lights.forEach(light => {
+      if (groupLightIds.has(light.patch.id)) {
+        light.selected = !allSelected;
+      }
+    });
+    this.updateCommonParameters();
+  }
+
+  isGroupFullySelected(group: Group): boolean {
+    const groupLightIds = new Set(group.patchIds);
+    const groupLights = this.lights.filter(l => groupLightIds.has(l.patch.id));
+    return groupLights.length > 0 && groupLights.every(l => l.selected);
   }
 
   getSelectedCount(): number {
