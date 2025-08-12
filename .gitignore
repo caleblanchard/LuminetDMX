@@ -43,6 +43,9 @@ temp/
 .docker/
 docker-data/
 
+# Local AI/editor config
+.claude/
+
 # Dependencies
 node_modules/
 npm-debug.log*
