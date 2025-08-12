@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { WebsocketService } from './services/websocket.service';
+import { ApiService } from './services/api.service';
 
 @Component({
   selector: 'app-root',
@@ -69,6 +70,8 @@ import { WebsocketService } from './services/websocket.service';
       
       <main class="main-content">
         <router-outlet></router-outlet>
+        <button class="floating-blackout" (click)="triggerBlackout()" title="Blackout (all channels to 0)">⛔</button>
+        <div class="blackout-tooltip">Blackout</div>
       </main>
     </div>
   `,
@@ -174,7 +177,48 @@ import { WebsocketService } from './services/websocket.service';
     .main-content {
       flex: 1;
       overflow-x: hidden;
+      position: relative;
     }
+
+    .floating-blackout {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: #ef4444;
+      color: white;
+      font-size: 22px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      cursor: pointer;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .floating-blackout:hover {
+      background: #dc2626;
+    }
+
+    .blackout-tooltip {
+      position: fixed;
+      right: 26px;
+      bottom: 86px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1100;
+      display: none;
+    }
+
+    .floating-blackout:hover + .blackout-tooltip { display: block; }
 
     @media (max-width: 768px) {
       .sidebar {
@@ -237,9 +281,14 @@ import { WebsocketService } from './services/websocket.service';
 export class AppComponent {
   isConnected = false;
 
-  constructor(private websocketService: WebsocketService) {
+  constructor(private websocketService: WebsocketService, private api: ApiService) {
     this.websocketService.connectionStatus$.subscribe(
       status => this.isConnected = status
     );
+  }
+
+  triggerBlackout(): void {
+    const fadeMs = 0; // adjust if you want a default fade
+    this.api.blackout(fadeMs).subscribe();
   }
 }

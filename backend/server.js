@@ -631,6 +631,17 @@ app.get('/api/dmx/values', (req, res) => {
   res.json(dmxValues);
 });
 
+// Blackout all DMX channels with optional fade
+app.post('/api/dmx/blackout', (req, res) => {
+  const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : 0;
+  const targets = dmxValues
+    .map((value, idx) => ({ channel: idx + 1, value: 0 }))
+    .filter(({ channel }) => channel >= 1 && channel <= 512);
+
+  applyChannelValuesWithFade(targets, requestedFade);
+  res.json({ message: 'Blackout initiated', fadeMs: requestedFade });
+});
+
 wss.on('connection', (ws) => {
   console.log('WebSocket client connected');
   

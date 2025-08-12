@@ -147,6 +147,10 @@ export class ApiService {
     );
   }
 
+  blackout(fadeMs?: number): Observable<{ message: string; fadeMs?: number }> {
+    return this.http.post<{ message: string; fadeMs?: number }>(`${this.baseUrl}/dmx/blackout`, { fadeMs });
+  }
+
   private logDebug(message: string, data?: any): void {
     const settings = JSON.parse(localStorage.getItem('luminetDmxSettings') || '{}');
     if (settings.enableLogging) {
