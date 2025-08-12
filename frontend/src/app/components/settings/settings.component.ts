@@ -375,8 +375,10 @@ export class SettingsComponent implements OnInit {
       console.log('[LuminetDMX Settings] Debug logging enabled - you should now see debug messages in the console');
       console.log('[LuminetDMX Settings] Current settings:', this.settings);
     }
-    
-    alert('Advanced settings saved successfully!');
+
+    this.confirm
+      .ask({ title: 'Saved', message: 'Advanced settings saved successfully!', confirmText: 'OK', hideCancel: true })
+      .subscribe();
   }
 
   resetSettings(): void {
@@ -400,7 +402,9 @@ export class SettingsComponent implements OnInit {
 
         localStorage.removeItem('luminetDmxSettings');
         this.saveUniverseConfig();
-        alert('Settings reset to defaults!');
+        this.confirm
+          .ask({ title: 'Reset', message: 'Settings reset to defaults!', confirmText: 'OK', hideCancel: true })
+          .subscribe();
       }
     });
   }
