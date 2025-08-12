@@ -360,10 +360,10 @@ export class SettingsComponent implements OnInit {
     this.apiService.updateUniverseConfig(this.universeConfig).subscribe(
       config => {
         this.universeConfig = config;
-        alert('Art-Net configuration saved successfully!');
+        this.confirm.ask({ title: 'Saved', message: 'Art-Net configuration saved successfully!', confirmText: 'OK', hideCancel: true }).subscribe();
       },
       error => {
-        alert('Failed to save configuration. Please check your settings.');
+        this.confirm.ask({ title: 'Error', message: 'Failed to save configuration. Please check your settings.', confirmText: 'OK', hideCancel: true }).subscribe();
       }
     );
   }
@@ -413,13 +413,13 @@ export class SettingsComponent implements OnInit {
     
     this.apiService.setDmxChannel(1, 128).subscribe(
       () => {
-        alert('Test signal sent successfully! Check your lighting equipment.');
+        this.confirm.ask({ title: 'Test Sent', message: 'Test signal sent successfully! Check your lighting equipment.', confirmText: 'OK', hideCancel: true }).subscribe();
         setTimeout(() => {
           this.apiService.setDmxChannel(1, 0).subscribe();
         }, 2000);
       },
       error => {
-        alert('Test failed. Please check your Art-Net configuration.');
+        this.confirm.ask({ title: 'Test Failed', message: 'Test failed. Please check your Art-Net configuration.', confirmText: 'OK', hideCancel: true }).subscribe();
       }
     );
   }

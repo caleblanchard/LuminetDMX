@@ -12,7 +12,7 @@ import { ConfirmService } from '../../services/confirm.service';
         <h3 class="title">{{ (confirm.state$ | async)?.options?.title || 'Are you sure?' }}</h3>
         <p class="message">{{ (confirm.state$ | async)?.options?.message }}</p>
         <div class="actions">
-          <button class="btn" (click)="confirm.cancel()">{{ (confirm.state$ | async)?.options?.cancelText || 'Cancel' }}</button>
+          <button class="btn" *ngIf="!(confirm.state$ | async)?.options?.hideCancel" (click)="confirm.cancel()">{{ (confirm.state$ | async)?.options?.cancelText || 'Cancel' }}</button>
           <button class="btn danger" [class.danger]="(confirm.state$ | async)?.options?.danger" (click)="confirm.confirm()">
             {{ (confirm.state$ | async)?.options?.confirmText || 'Confirm' }}
           </button>

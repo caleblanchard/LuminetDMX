@@ -7,6 +7,7 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  hideCancel?: boolean;
 }
 
 interface ConfirmState {
