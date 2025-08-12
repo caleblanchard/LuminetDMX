@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { WebsocketService } from '../../services/websocket.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { UniverseConfig } from '../../models/fixture.model';
 
 @Component({
@@ -329,7 +330,8 @@ export class SettingsComponent implements OnInit {
 
   constructor(
     private apiService: ApiService,
-    private websocketService: WebsocketService
+    private websocketService: WebsocketService,
+    private confirm: ConfirmService
   ) {}
 
   ngOnInit(): void {
@@ -378,22 +380,29 @@ export class SettingsComponent implements OnInit {
   }
 
   resetSettings(): void {
-    if (confirm('Are you sure you want to reset all settings to defaults?')) {
-      this.settings = {
-        enableLogging: false,
-        autoReconnect: true,
-        showChannelNumbers: true
-      };
-      
-      this.universeConfig = {
-        universe: 0,
-        broadcastIP: '255.255.255.255'
-      };
-      
-      localStorage.removeItem('luminetDmxSettings');
-      this.saveUniverseConfig();
-      alert('Settings reset to defaults!');
-    }
+    this.confirm.ask({
+      title: 'Reset to Defaults',
+      message: 'Are you sure you want to reset all settings to defaults?',
+      confirmText: 'Reset',
+      danger: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.settings = {
+          enableLogging: false,
+          autoReconnect: true,
+          showChannelNumbers: true
+        };
+
+        this.universeConfig = {
+          universe: 0,
+          broadcastIP: '255.255.255.255'
+        };
+
+        localStorage.removeItem('luminetDmxSettings');
+        this.saveUniverseConfig();
+        alert('Settings reset to defaults!');
+      }
+    });
   }
 
   testConnection(): void {

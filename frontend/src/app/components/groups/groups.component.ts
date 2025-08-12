@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { Group, Patch, FixtureTemplate } from '../../models/fixture.model';
 
 @Component({
@@ -344,7 +345,7 @@ export class GroupsComponent implements OnInit {
   editingGroup: Group | null = null;
   currentGroup: Partial<Group> = this.getEmptyGroup();
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private confirm: ConfirmService) {}
 
   ngOnInit(): void {
     this.loadGroups();
@@ -437,11 +438,16 @@ export class GroupsComponent implements OnInit {
   }
 
   deleteGroup(id: string): void {
-    if (confirm('Are you sure you want to delete this group?')) {
-      this.apiService.deleteGroup(id).subscribe(
-        () => this.loadGroups()
-      );
-    }
+    this.confirm.ask({
+      title: 'Delete Group',
+      message: 'Are you sure you want to delete this group? This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.apiService.deleteGroup(id).subscribe(() => this.loadGroups());
+      }
+    });
   }
 
   cancelEdit(): void {

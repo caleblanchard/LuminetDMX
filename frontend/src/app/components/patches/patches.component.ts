@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { FixtureTemplate, Patch } from '../../models/fixture.model';
 
 @Component({
@@ -479,7 +480,7 @@ export class PatchesComponent implements OnInit {
   addressPreview: any = null;
   isCheckingAddresses = false;
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private confirm: ConfirmService) {}
 
   ngOnInit(): void {
     this.loadPatches();
@@ -536,11 +537,16 @@ export class PatchesComponent implements OnInit {
   }
 
   deletePatch(id: string): void {
-    if (confirm('Are you sure you want to delete this patch?')) {
-      this.apiService.deletePatch(id).subscribe(
-        () => this.loadPatches()
-      );
-    }
+    this.confirm.ask({
+      title: 'Delete Patch',
+      message: 'Are you sure you want to delete this patch? This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.apiService.deletePatch(id).subscribe(() => this.loadPatches());
+      }
+    });
   }
 
   cancelEdit(): void {

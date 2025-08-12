@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ConfirmModalComponent } from './components/confirm-modal/confirm-modal.component';
 import { WebsocketService } from './services/websocket.service';
 import { ApiService } from './services/api.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ConfirmModalComponent],
   template: `
     <div class="app-container">
       <nav class="sidebar">
@@ -72,6 +73,7 @@ import { ApiService } from './services/api.service';
         <router-outlet></router-outlet>
         <button class="floating-blackout" (click)="triggerBlackout()" title="Blackout (all channels to 0)">⛔</button>
         <div class="blackout-tooltip">Blackout</div>
+        <app-confirm-modal></app-confirm-modal>
       </main>
     </div>
   `,

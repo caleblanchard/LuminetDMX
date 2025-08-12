@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models/fixture.model';
 
 @Component({
@@ -426,7 +427,7 @@ export class PresetsComponent implements OnInit {
   editingPreset: Preset | null = null;
   currentPreset: Partial<Preset> = this.getEmptyPreset();
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private confirm: ConfirmService) {}
 
   ngOnInit(): void {
     this.loadPresets();
@@ -511,11 +512,16 @@ export class PresetsComponent implements OnInit {
   }
 
   deletePreset(id: string): void {
-    if (confirm('Are you sure you want to delete this preset?')) {
-      this.apiService.deletePreset(id).subscribe(
-        () => this.loadPresets()
-      );
-    }
+    this.confirm.ask({
+      title: 'Delete Preset',
+      message: 'Are you sure you want to delete this preset? This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.apiService.deletePreset(id).subscribe(() => this.loadPresets());
+      }
+    });
   }
 
   togglePreset(preset: Preset): void {

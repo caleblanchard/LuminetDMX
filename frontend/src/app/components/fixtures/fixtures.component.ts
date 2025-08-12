@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { FixtureTemplate, FixtureChannel } from '../../models/fixture.model';
 
 @Component({
@@ -280,7 +281,7 @@ export class FixturesComponent implements OnInit {
   editingTemplate: FixtureTemplate | null = null;
   currentTemplate: Partial<FixtureTemplate> = this.getEmptyTemplate();
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private confirm: ConfirmService) {}
 
   ngOnInit(): void {
     this.loadTemplates();
@@ -353,11 +354,16 @@ export class FixturesComponent implements OnInit {
   }
 
   deleteTemplate(id: string): void {
-    if (confirm('Are you sure you want to delete this template?')) {
-      this.apiService.deleteFixtureTemplate(id).subscribe(
-        () => this.loadTemplates()
-      );
-    }
+    this.confirm.ask({
+      title: 'Delete Fixture Template',
+      message: 'Are you sure you want to delete this template? This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.apiService.deleteFixtureTemplate(id).subscribe(() => this.loadTemplates());
+      }
+    });
   }
 
   cancelEdit(): void {
