@@ -52,6 +52,7 @@ export interface Preset {
   name: string;
   description?: string;
   channelValues: PresetChannelValue[];
+  fadeMs?: number;
   createdAt: string;
   updatedAt?: string;
 }

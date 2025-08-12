@@ -46,7 +46,9 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
           </div>
           
           <div class="preset-actions">
-            <button class="btn btn-primary" (click)="applyPreset(preset)">Apply</button>
+            <button class="btn btn-primary toggle" (click)="togglePreset(preset)" [class.active]="isActive(preset)">
+              {{ isActive(preset) ? 'On' : 'Off' }}
+            </button>
             <button class="btn btn-secondary" (click)="editPreset(preset)">Edit</button>
             <button class="btn btn-danger" (click)="deletePreset(preset.id)">Delete</button>
           </div>
@@ -170,6 +172,7 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
       gap: 12px;
       margin-bottom: 12px;
     }
+    .preset-meta .fade { color: #94a3b8; font-size: 12px; }
 
     .channel-count {
       font-size: 12px;
@@ -239,6 +242,7 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
       gap: 8px;
       justify-content: flex-end;
     }
+    .btn.toggle.active { background: #10b981; }
 
     .form-container {
       max-width: 800px;
@@ -415,6 +419,7 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
 })
 export class PresetsComponent implements OnInit {
   presets: Preset[] = [];
+  activePresetIds: Set<string> = new Set<string>();
   patches: Patch[] = [];
   templates: FixtureTemplate[] = [];
   showAddForm = false;
@@ -513,19 +518,29 @@ export class PresetsComponent implements OnInit {
     }
   }
 
-  applyPreset(preset: Preset): void {
-    if (confirm(`Apply preset "${preset.name}"? This will change ${preset.channelValues.length} DMX channels.`)) {
-      this.apiService.applyPreset(preset.id).subscribe(
-        response => {
-          console.log('Preset applied:', response);
-          // Could show success message to user
-        },
-        error => {
-          console.error('Error applying preset:', error);
-          // Could show error message to user
+  togglePreset(preset: Preset): void {
+    const isActive = this.activePresetIds.has(preset.id);
+    const fadeMs = preset.fadeMs;
+    const req$ = isActive
+      ? this.apiService.clearPreset(preset.id, fadeMs)
+      : this.apiService.applyPreset(preset.id, fadeMs);
+
+    req$.subscribe(
+      () => {
+        if (isActive) {
+          this.activePresetIds.delete(preset.id);
+        } else {
+          this.activePresetIds.add(preset.id);
         }
-      );
-    }
+      },
+      (error) => {
+        console.error('Preset toggle error:', error);
+      }
+    );
+  }
+
+  isActive(preset: Preset): boolean {
+    return this.activePresetIds.has(preset.id);
   }
 
   removeChannel(index: number): void {

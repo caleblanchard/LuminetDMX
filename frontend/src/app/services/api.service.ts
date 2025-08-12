@@ -94,8 +94,12 @@ export class ApiService {
     return this.http.delete(`${this.baseUrl}/presets/${id}`);
   }
 
-  applyPreset(id: string): Observable<{ message: string; channelsUpdated: number }> {
-    return this.http.post<{ message: string; channelsUpdated: number }>(`${this.baseUrl}/presets/${id}/apply`, {});
+  applyPreset(id: string, fadeMs?: number): Observable<{ message: string; channelsUpdated: number; fadeMs?: number }> {
+    return this.http.post<{ message: string; channelsUpdated: number; fadeMs?: number }>(`${this.baseUrl}/presets/${id}/apply`, { fadeMs });
+  }
+
+  clearPreset(id: string, fadeMs?: number): Observable<{ message: string; channelsUpdated: number; fadeMs?: number }> {
+    return this.http.post<{ message: string; channelsUpdated: number; fadeMs?: number }>(`${this.baseUrl}/presets/${id}/clear`, { fadeMs });
   }
 
   getGroups(): Observable<Group[]> {

@@ -242,6 +242,48 @@ function broadcastDMX() {
   });
 }
 
+// Apply a set of channel values with optional fade
+function applyChannelValuesWithFade(channelTargets, fadeMs = 0) {
+  if (!Array.isArray(channelTargets) || channelTargets.length === 0) return;
+  const clampedTargets = channelTargets.map(({ channel, value }) => ({
+    channel: Math.max(1, Math.min(512, channel)),
+    value: Math.max(0, Math.min(255, Math.round(value)))
+  }));
+
+  if (!fadeMs || fadeMs <= 0) {
+    clampedTargets.forEach(({ channel, value }) => {
+      dmxValues[channel - 1] = value;
+    });
+    db.saveDmxValues(dmxValues);
+    broadcastDMX();
+    return;
+  }
+
+  const startValues = clampedTargets.map(({ channel }) => dmxValues[channel - 1] || 0);
+  const endValues = clampedTargets.map(({ value }) => value);
+  const channels = clampedTargets.map(({ channel }) => channel);
+  const tickMs = 30;
+  const steps = Math.max(1, Math.floor(fadeMs / tickMs));
+  let step = 0;
+
+  const intervalId = setInterval(() => {
+    step += 1;
+    const t = step / steps;
+    channels.forEach((channel, idx) => {
+      const start = startValues[idx];
+      const end = endValues[idx];
+      const value = Math.round(start + (end - start) * t);
+      dmxValues[channel - 1] = value;
+    });
+    db.saveDmxValues(dmxValues);
+    broadcastDMX();
+
+    if (step >= steps) {
+      clearInterval(intervalId);
+    }
+  }, tickMs);
+}
+
 app.get('/api/fixture-templates', (req, res) => {
   res.json(fixtureTemplates);
 });
@@ -505,22 +547,42 @@ app.post('/api/presets/:id/apply', (req, res) => {
     return res.status(404).json({ error: 'Preset not found' });
   }
 
-  // Apply all channel values from the preset
-  preset.channelValues.forEach(channelValue => {
-    if (channelValue.channel >= 1 && channelValue.channel <= 512) {
-      dmxValues[channelValue.channel - 1] = channelValue.value;
-    }
-  });
+  const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : undefined;
+  const fadeMs = requestedFade ?? preset.fadeMs ?? 0;
 
-  // Save the updated DMX values
-  db.saveDmxValues(dmxValues);
-  
-  // Broadcast the changes
-  broadcastDMX();
-  
+  const targets = preset.channelValues
+    .filter(cv => cv.channel >= 1 && cv.channel <= 512)
+    .map(cv => ({ channel: cv.channel, value: cv.value }));
+
+  applyChannelValuesWithFade(targets, fadeMs);
+
   res.json({ 
     message: `Applied preset "${preset.name}"`,
-    channelsUpdated: preset.channelValues.length
+    channelsUpdated: targets.length,
+    fadeMs
+  });
+});
+
+// Clear a preset (set its channels to 0) with optional fade
+app.post('/api/presets/:id/clear', (req, res) => {
+  const preset = presets.find(p => p.id === req.params.id);
+  if (!preset) {
+    return res.status(404).json({ error: 'Preset not found' });
+  }
+
+  const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : undefined;
+  const fadeMs = requestedFade ?? preset.fadeMs ?? 0;
+
+  const targets = preset.channelValues
+    .filter(cv => cv.channel >= 1 && cv.channel <= 512)
+    .map(cv => ({ channel: cv.channel, value: 0 }));
+
+  applyChannelValuesWithFade(targets, fadeMs);
+
+  res.json({ 
+    message: `Cleared preset "${preset.name}"`,
+    channelsUpdated: targets.length,
+    fadeMs
   });
 });
 
