@@ -87,88 +87,93 @@ interface ColorControl {
         </h2>
 
         <div class="parameters-grid">
-          <!-- Common Parameters -->
-          <div class="parameter-section" *ngFor="let param of commonParameters">
+          <!-- Non-Color Parameters Only -->
+          <div class="parameter-section" *ngFor="let param of getNonColorParameters()">
             
             <!-- Dimmer Control -->
             <div class="parameter-control" *ngIf="param.type === 'dimmer'">
               <label class="parameter-label">{{ param.name }}</label>
-              <div class="slider-control">
+              <div class="fader-control-vertical">
                 <input type="range" 
-                       class="parameter-slider dimmer-slider"
+                       class="parameter-fader dimmer-fader"
                        min="0" 
                        max="255" 
                        [(ngModel)]="param.value"
-                       (input)="updateParameter(param, $event)">
-                <div class="slider-value">{{ param.value }}</div>
-              </div>
-            </div>
-
-            <!-- Color Control (RGB/RGBA) -->
-            <div class="parameter-control color-control" *ngIf="param.type === 'color' && isColorGroup(param)">
-              <label class="parameter-label">Color Control</label>
-              <div class="color-controls">
-                <div class="color-wheel-container">
-                  <input type="color" 
-                         class="color-wheel"
-                         [value]="rgbToHex(colorControl.red, colorControl.green, colorControl.blue)"
-                         (change)="updateColorFromWheel($event)">
-                  <div class="color-preview" 
-                       [style.background-color]="rgbToHex(colorControl.red, colorControl.green, colorControl.blue)">
-                  </div>
-                </div>
-                <div class="color-sliders">
-                  <div class="color-slider-row">
-                    <label>Red</label>
-                    <input type="range" min="0" max="255" 
-                           [(ngModel)]="colorControl.red" 
-                           (input)="updateColorChannels()"
-                           class="color-slider red-slider">
-                    <span>{{ colorControl.red }}</span>
-                  </div>
-                  <div class="color-slider-row">
-                    <label>Green</label>
-                    <input type="range" min="0" max="255" 
-                           [(ngModel)]="colorControl.green" 
-                           (input)="updateColorChannels()"
-                           class="color-slider green-slider">
-                    <span>{{ colorControl.green }}</span>
-                  </div>
-                  <div class="color-slider-row">
-                    <label>Blue</label>
-                    <input type="range" min="0" max="255" 
-                           [(ngModel)]="colorControl.blue" 
-                           (input)="updateColorChannels()"
-                           class="color-slider blue-slider">
-                    <span>{{ colorControl.blue }}</span>
-                  </div>
-                  <div class="color-slider-row" *ngIf="colorControl.amber !== undefined">
-                    <label>Amber</label>
-                    <input type="range" min="0" max="255" 
-                           [(ngModel)]="colorControl.amber" 
-                           (input)="updateColorChannels()"
-                           class="color-slider amber-slider">
-                    <span>{{ colorControl.amber }}</span>
-                  </div>
-                </div>
+                       (input)="updateParameter(param, $event)"
+                       orientation="vertical">
+                <div class="fader-value">{{ dmxToPercentage(param.value) }}%</div>
               </div>
             </div>
 
             <!-- Other Parameters -->
-            <div class="parameter-control" *ngIf="param.type !== 'dimmer' && (param.type !== 'color' || !isColorGroup(param))">
+            <div class="parameter-control" *ngIf="param.type !== 'dimmer'">
               <label class="parameter-label">{{ param.name }}</label>
-              <div class="slider-control">
+              <div class="fader-control-vertical">
                 <input type="range" 
-                       class="parameter-slider"
-                       [class]="param.type + '-slider'"
+                       class="parameter-fader"
+                       [class]="param.type + '-fader'"
                        min="0" 
                        max="255" 
                        [(ngModel)]="param.value"
-                       (input)="updateParameter(param, $event)">
-                <div class="slider-value">{{ param.value }}</div>
+                       (input)="updateParameter(param, $event)"
+                       orientation="vertical">
+                <div class="fader-value">{{ param.value }}</div>
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- Color Control Section (Outside Grid) -->
+        <div class="color-control-section" *ngIf="hasColorControl()">
+          <div class="color-control-container">
+            <h3 class="color-control-title">Color Control</h3>
+            <div class="color-controls">
+              <div class="color-wheel-container">
+                <input type="color" 
+                       class="color-wheel"
+                       [value]="rgbToHex(colorControl.red, colorControl.green, colorControl.blue)"
+                       (change)="updateColorFromWheel($event)">
+              </div>
+              <div class="color-sliders">
+                <div class="color-fader-column">
+                  <label>Red</label>
+                  <input type="range" min="0" max="255" 
+                         [(ngModel)]="colorControl.red" 
+                         (input)="updateColorChannels()"
+                         class="color-fader red-fader"
+                         orientation="vertical">
+                  <span>{{ colorControl.red }}</span>
+                </div>
+                <div class="color-fader-column">
+                  <label>Green</label>
+                  <input type="range" min="0" max="255" 
+                         [(ngModel)]="colorControl.green" 
+                         (input)="updateColorChannels()"
+                         class="color-fader green-fader"
+                         orientation="vertical">
+                  <span>{{ colorControl.green }}</span>
+                </div>
+                <div class="color-fader-column">
+                  <label>Blue</label>
+                  <input type="range" min="0" max="255" 
+                         [(ngModel)]="colorControl.blue" 
+                         (input)="updateColorChannels()"
+                         class="color-fader blue-fader"
+                         orientation="vertical">
+                  <span>{{ colorControl.blue }}</span>
+                </div>
+                <div class="color-fader-column" *ngIf="colorControl.amber !== undefined">
+                  <label>Amber</label>
+                  <input type="range" min="0" max="255" 
+                         [(ngModel)]="colorControl.amber" 
+                         (input)="updateColorChannels()"
+                         class="color-fader amber-fader"
+                         orientation="vertical">
+                  <span>{{ colorControl.amber }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -193,6 +198,10 @@ interface ColorControl {
               <label class="label">Description (optional)</label>
               <textarea class="input" [(ngModel)]="newPresetDescription" name="presetDescription" 
                         rows="3" placeholder="Describe this preset..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="label">Fade Duration (ms)</label>
+              <input type="number" class="input" min="0" step="50" [(ngModel)]="newPresetFadeMs" name="fadeMs" placeholder="e.g. 1000">
             </div>
             <div class="preset-preview-info">
               <p>This preset will save {{ presetChannelData.length }} channel values that are currently non-zero.</p>
@@ -387,9 +396,10 @@ interface ColorControl {
 
     .parameters-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 24px;
       margin-bottom: 24px;
+      width: 100%;
     }
 
     .parameter-control {
@@ -397,6 +407,10 @@ interface ColorControl {
       border-radius: 8px;
       padding: 16px;
       border: 1px solid rgba(148, 163, 184, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 240px;
     }
 
     .parameter-label {
@@ -405,52 +419,90 @@ interface ColorControl {
       font-weight: 500;
       color: #cbd5e1;
       margin-bottom: 12px;
+      text-align: center;
     }
 
-    .slider-control {
+    .fader-control-vertical {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
+      height: 200px;
     }
 
-    .parameter-slider {
-      flex: 1;
-      height: 8px;
+    .parameter-fader {
+      writing-mode: bt-lr;
+      -webkit-appearance: slider-vertical;
+      width: 8px;
+      height: 150px;
       border-radius: 4px;
       background: rgba(15, 23, 42, 0.8);
       outline: none;
-      -webkit-appearance: none;
+      cursor: pointer;
+      margin-bottom: 8px;
     }
 
-    .parameter-slider::-webkit-slider-thumb {
+    .parameter-fader::-webkit-slider-thumb {
       -webkit-appearance: none;
       width: 20px;
-      height: 20px;
-      border-radius: 50%;
+      height: 12px;
+      border-radius: 6px;
       background: #3b82f6;
       cursor: pointer;
     }
 
-    .dimmer-slider::-webkit-slider-thumb {
+    .parameter-fader::-moz-range-thumb {
+      width: 20px;
+      height: 12px;
+      border-radius: 6px;
+      background: #3b82f6;
+      cursor: pointer;
+      border: none;
+    }
+
+    .dimmer-fader::-webkit-slider-thumb {
       background: #10b981;
     }
 
-    .slider-value {
-      min-width: 40px;
+    .dimmer-fader::-moz-range-thumb {
+      background: #10b981;
+    }
+
+    .fader-value {
       font-size: 14px;
       font-weight: 500;
       color: #e2e8f0;
-      text-align: right;
+      text-align: center;
+      min-width: 40px;
     }
 
-    .color-control {
-      grid-column: 1 / -1;
+    .color-control-section {
+      margin: 32px 0;
+      width: 100%;
+    }
+
+    .color-control-container {
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .color-control-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 20px;
+      text-align: center;
     }
 
     .color-controls {
       display: flex;
-      gap: 24px;
+      gap: 16px;
       align-items: flex-start;
+      width: 100%;
+      justify-content: center;
     }
 
     .color-wheel-container {
@@ -458,6 +510,7 @@ interface ColorControl {
       flex-direction: column;
       align-items: center;
       gap: 12px;
+      flex-shrink: 0;
     }
 
     .color-wheel {
@@ -476,40 +529,73 @@ interface ColorControl {
     }
 
     .color-sliders {
-      flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .color-fader-column {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-    }
-
-    .color-slider-row {
-      display: flex;
       align-items: center;
-      gap: 12px;
-    }
-
-    .color-slider-row label {
-      min-width: 60px;
-      font-size: 14px;
-      color: #cbd5e1;
-    }
-
-    .color-slider-row span {
-      min-width: 40px;
-      font-size: 14px;
-      color: #e2e8f0;
-      text-align: right;
-    }
-
-    .color-slider {
+      gap: 8px;
       flex: 1;
-      height: 6px;
+      max-width: 80px;
     }
 
-    .red-slider::-webkit-slider-thumb { background: #ef4444; }
-    .green-slider::-webkit-slider-thumb { background: #10b981; }
-    .blue-slider::-webkit-slider-thumb { background: #3b82f6; }
-    .amber-slider::-webkit-slider-thumb { background: #f59e0b; }
+    .color-fader-column label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .color-fader-column span {
+      font-size: 13px;
+      color: #e2e8f0;
+      text-align: center;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .color-fader {
+      writing-mode: bt-lr;
+      -webkit-appearance: slider-vertical;
+      width: 8px;
+      height: 120px;
+      border-radius: 4px;
+      background: rgba(15, 23, 42, 0.8);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .color-fader::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .color-fader::-moz-range-thumb {
+      width: 18px;
+      height: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+    }
+
+    .red-fader::-webkit-slider-thumb { background: #ef4444; }
+    .green-fader::-webkit-slider-thumb { background: #10b981; }
+    .blue-fader::-webkit-slider-thumb { background: #3b82f6; }
+    .amber-fader::-webkit-slider-thumb { background: #f59e0b; }
+
+    .red-fader::-moz-range-thumb { background: #ef4444; }
+    .green-fader::-moz-range-thumb { background: #10b981; }
+    .blue-fader::-moz-range-thumb { background: #3b82f6; }
+    .amber-fader::-moz-range-thumb { background: #f59e0b; }
 
     .quick-actions {
       display: flex;
@@ -606,12 +692,40 @@ interface ColorControl {
       }
 
       .parameters-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
       }
 
+      .parameter-control {
+        min-height: 200px;
+        padding: 12px;
+      }
+
+      .parameter-fader {
+        height: 120px;
+      }
+
+      .fader-control-vertical {
+        height: 160px;
+      }
+
+      .color-control-container {
+        max-width: none;
+        margin: 0;
+        padding: 16px;
+      }
+      
       .color-controls {
         flex-direction: column;
         align-items: center;
+      }
+      
+      .color-sliders {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .color-fader {
+        height: 100px;
       }
     }
   `]
@@ -626,6 +740,7 @@ export class LightControlComponent implements OnInit, OnDestroy {
   showPresetModal = false;
   newPresetName = '';
   newPresetDescription = '';
+  newPresetFadeMs?: number;
   presetChannelData: PresetChannelValue[] = [];
   
   private subscriptions: Subscription[] = [];
@@ -1029,6 +1144,7 @@ export class LightControlComponent implements OnInit, OnDestroy {
     const preset: Omit<Preset, 'id' | 'createdAt'> = {
       name: this.newPresetName,
       description: this.newPresetDescription || undefined,
+      fadeMs: this.newPresetFadeMs,
       channelValues: this.presetChannelData
     };
 
@@ -1047,6 +1163,23 @@ export class LightControlComponent implements OnInit, OnDestroy {
     this.showPresetModal = false;
     this.newPresetName = '';
     this.newPresetDescription = '';
+    this.newPresetFadeMs = undefined;
     this.presetChannelData = [];
+  }
+
+  dmxToPercentage(dmxValue: number): number {
+    return Math.round((dmxValue / 255) * 100);
+  }
+
+  percentageToDmx(percentage: number): number {
+    return Math.round((percentage / 100) * 255);
+  }
+
+  hasColorControl(): boolean {
+    return this.commonParameters.some(param => param.type === 'color');
+  }
+
+  getNonColorParameters(): CommonParameter[] {
+    return this.commonParameters.filter(param => param.type !== 'color');
   }
 }

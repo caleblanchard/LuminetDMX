@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { WebsocketService } from '../../services/websocket.service';
-import { Patch, Group, FixtureTemplate, FixtureChannel } from '../../models/fixture.model';
+import { Patch, Group, FixtureTemplate, FixtureChannel, Preset, PresetChannelValue } from '../../models/fixture.model';
 import { Subscription } from 'rxjs';
 
 interface FaderChannel {
@@ -39,6 +39,7 @@ interface FaderChannel {
           </div>
           <button class="btn btn-danger" (click)="blackout()">Blackout</button>
           <button class="btn btn-secondary" (click)="fullOn()">Full On</button>
+          <button class="btn btn-success" (click)="saveAsPreset()">Save as Preset</button>
         </div>
       </div>
 
@@ -63,7 +64,7 @@ interface FaderChannel {
                        [value]="fader.value"
                        (input)="updateChannelValue(fader.channel, $event)"
                        orientation="vertical">
-                <div class="fader-value">{{ fader.value }}</div>
+                <div class="fader-value">{{ getFaderDisplayValue(fader) }}</div>
               </div>
             </div>
           </div>
@@ -91,7 +92,7 @@ interface FaderChannel {
                        max="255" 
                        [value]="getGroupMasterValue(group)"
                        (input)="updateGroupMaster(group, $event)">
-                <div class="fader-value">{{ getGroupMasterValue(group) }}</div>
+                <div class="fader-value">{{ dmxToPercentage(getGroupMasterValue(group)) }}%</div>
               </div>
             </div>
             
@@ -108,7 +109,7 @@ interface FaderChannel {
                          max="255" 
                          [value]="getPatchMasterValue(patch)"
                          (input)="updatePatchMaster(patch, $event)">
-                  <div class="fader-value">{{ getPatchMasterValue(patch) }}</div>
+                  <div class="fader-value">{{ dmxToPercentage(getPatchMasterValue(patch)) }}%</div>
                 </div>
               </div>
             </div>
@@ -129,6 +130,35 @@ interface FaderChannel {
         </div>
         <div class="monitor-info" *ngIf="hasActiveChannels()">
           Showing channels 1-64. Active channels: {{ getActiveChannelCount() }}
+        </div>
+      </div>
+
+      <!-- Save Preset Modal -->
+      <div class="modal-overlay" *ngIf="showPresetModal" (click)="cancelPresetModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h2>Save as Preset</h2>
+          <form (ngSubmit)="confirmSavePreset()" #presetForm="ngForm">
+            <div class="form-group">
+              <label class="label">Preset Name</label>
+              <input type="text" class="input" [(ngModel)]="newPresetName" name="presetName" required>
+            </div>
+            <div class="form-group">
+              <label class="label">Description (optional)</label>
+              <textarea class="input" [(ngModel)]="newPresetDescription" name="presetDescription" 
+                        rows="3" placeholder="Describe this preset..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="label">Fade Duration (ms)</label>
+              <input type="number" class="input" min="0" step="50" [(ngModel)]="newPresetFadeMs" name="fadeMs" placeholder="e.g. 1000">
+            </div>
+            <div class="preset-preview-info">
+              <p>This preset will save {{ presetChannelData.length }} channel values that are currently non-zero.</p>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" (click)="cancelPresetModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!presetForm.valid">Save Preset</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -398,6 +428,61 @@ interface FaderChannel {
       text-align: center;
     }
 
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: rgba(30, 41, 59, 0.95);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h2 {
+      color: #e2e8f0;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .preset-preview-info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 20px;
+    }
+
+    .preset-preview-info p {
+      color: #cbd5e1;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
     @media (max-width: 1024px) {
       .faders-grid {
         grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
@@ -443,6 +528,11 @@ export class ConsoleComponent implements OnInit, OnDestroy {
   dmxValues: number[] = new Array(512).fill(0);
   channelSections: FaderChannel[][] = [];
   viewMode: 'individual' | 'groups' = 'individual';
+  showPresetModal = false;
+  newPresetName = '';
+  newPresetDescription = '';
+  newPresetFadeMs?: number;
+  presetChannelData: PresetChannelValue[] = [];
   
   private subscriptions: Subscription[] = [];
 
@@ -674,6 +764,99 @@ export class ConsoleComponent implements OnInit, OnDestroy {
         }
       });
     });
+  }
+
+  getFaderDisplayValue(fader: FaderChannel): string {
+    if (fader.type === 'dimmer') {
+      return `${this.dmxToPercentage(fader.value)}%`;
+    }
+    return fader.value.toString();
+  }
+
+  dmxToPercentage(dmxValue: number): number {
+    return Math.round((dmxValue / 255) * 100);
+  }
+
+  percentageToDmx(percentage: number): number {
+    return Math.round((percentage / 100) * 255);
+  }
+
+  saveAsPreset(): void {
+    this.apiService.getDmxValues().subscribe(dmxValues => {
+      this.presetChannelData = this.buildPresetChannelData(dmxValues);
+      this.newPresetName = '';
+      this.newPresetDescription = '';
+      this.showPresetModal = true;
+    });
+  }
+
+  buildPresetChannelData(dmxValues: number[]): PresetChannelValue[] {
+    const channelData: PresetChannelValue[] = [];
+
+    dmxValues.forEach((value, index) => {
+      if (value > 0) {
+        const channelNumber = index + 1;
+        const patchInfo = this.findPatchForChannel(channelNumber);
+        
+        channelData.push({
+          channel: channelNumber,
+          value: value,
+          patchId: patchInfo?.patch.id,
+          patchName: patchInfo?.patch.name,
+          channelName: patchInfo?.channelName
+        });
+      }
+    });
+
+    return channelData;
+  }
+
+  findPatchForChannel(channelNumber: number): { patch: Patch; channelName?: string } | null {
+    for (const patch of this.patches) {
+      const template = this.getTemplate(patch.templateId);
+      if (!template) continue;
+      
+      const startAddress = patch.startAddress;
+      const endAddress = startAddress + template.channelCount - 1;
+      
+      if (channelNumber >= startAddress && channelNumber <= endAddress) {
+        const channelOffset = channelNumber - startAddress + 1;
+        const templateChannel = template.channels.find(ch => ch.channelOffset === channelOffset);
+        
+        return {
+          patch: patch,
+          channelName: templateChannel?.name
+        };
+      }
+    }
+    return null;
+  }
+
+  confirmSavePreset(): void {
+    const preset: Omit<Preset, 'id' | 'createdAt'> = {
+      name: this.newPresetName,
+      description: this.newPresetDescription || undefined,
+      fadeMs: this.newPresetFadeMs,
+      channelValues: this.presetChannelData
+    };
+
+    this.apiService.createPreset(preset).subscribe(
+      response => {
+        console.log('Preset created successfully:', response);
+        this.cancelPresetModal();
+      },
+      error => {
+        console.error('Error creating preset:', error);
+      }
+    );
+  }
+
+  cancelPresetModal(): void {
+    this.showPresetModal = false;
+    this.newPresetName = '';
+    this.newPresetDescription = '';
+    this.newPresetFadeMs = undefined;
+    this.presetChannelData = [];
   }
 
   private logDebug(message: string, data?: any): void {
