@@ -25,6 +25,7 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
             <div class="preset-meta">
               <span class="channel-count">{{ preset.channelValues.length }} channels</span>
               <span class="created-date">{{ formatDate(preset.createdAt) }}</span>
+              <span class="fade" *ngIf="preset.fadeMs !== undefined && preset.fadeMs !== null">Fade: {{ preset.fadeMs }} ms</span>
             </div>
           </div>
           
@@ -110,6 +111,13 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
               </div>
             </div>
             
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="label">Fade Duration (ms)</label>
+                <input type="number" class="input" min="0" step="50" [(ngModel)]="currentPreset.fadeMs" name="fadeMs" placeholder="e.g. 1000">
+              </div>
+            </div>
+
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
               <button type="submit" class="btn btn-primary" 
