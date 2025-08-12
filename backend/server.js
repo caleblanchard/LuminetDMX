@@ -2,13 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const WebSocket = require('ws');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const dgram = require('dgram');
 const { v4: uuidv4 } = require('uuid');
 const FileDatabase = require('./database');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, path: '/ws' });
 
 app.use(cors());
 app.use(express.json());
@@ -581,6 +583,18 @@ wss.on('connection', (ws) => {
 });
 
 initializeArtnet();
+
+// Serve built frontend from /app/public if present
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  // Static assets
+  app.use(express.static(publicDir));
+
+  // SPA fallback for non-API routes
+  app.get(/^(?!\/api).*$/, (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {

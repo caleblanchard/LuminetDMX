@@ -1,6 +1,6 @@
 services:
-  backend:
-    build: ./backend
+  app:
+    build: .
     ports:
       - "3000:3000"
     environment:
@@ -9,16 +9,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-      - ./backend/data:/app/data  # Mount local data directory for development
-    networks:
-      - luminet-network
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "4200:80"
-    depends_on:
-      - backend
+      - ./backend/data:/app/data
     networks:
       - luminet-network
 
