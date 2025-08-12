@@ -25,3 +25,7 @@ services:
 volumes:
   luminet-data:
     driver: local
+
+networks:
+  av-macvlan-net:
+    external: true
