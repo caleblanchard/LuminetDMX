@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - luminet-data:/app/data
+    networks:
+      - av-macvlan-net
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - av-macvlan-net
+
+volumes:
+  luminet-data:
+    driver: local

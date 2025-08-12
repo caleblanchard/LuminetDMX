@@ -1,0 +1,118 @@
+[
+  {
+    "id": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "name": "EVE E-50Z",
+    "manufacturer": "Chauvet DJ",
+    "model": "EVE E-50Z",
+    "channelCount": 3,
+    "channels": [
+      {
+        "name": "Intensity",
+        "channelOffset": 1,
+        "type": "dimmer",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Strobe Speed",
+        "channelOffset": 2,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Dimmer Speed",
+        "channelOffset": 3,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      }
+    ],
+    "createdAt": "2025-08-12T13:01:08.208Z"
+  },
+  {
+    "id": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "name": "SlimPAR Q12 USB - 9 channel",
+    "manufacturer": "Chauvet DJ",
+    "model": "SlimPAR Q12 USB",
+    "channelCount": 9,
+    "channels": [
+      {
+        "name": "Red",
+        "channelOffset": 1,
+        "type": "color",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Green",
+        "channelOffset": 2,
+        "type": "color",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Blue",
+        "channelOffset": 3,
+        "type": "color",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Amber",
+        "channelOffset": 4,
+        "type": "color",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Color Macro",
+        "channelOffset": 5,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Strobe Speed",
+        "channelOffset": 6,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Mode",
+        "channelOffset": 7,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Intensity",
+        "channelOffset": 8,
+        "type": "dimmer",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      },
+      {
+        "name": "Dimmer Speed",
+        "channelOffset": 9,
+        "type": "other",
+        "defaultValue": 0,
+        "minValue": 0,
+        "maxValue": 255
+      }
+    ],
+    "createdAt": "2025-08-12T13:28:05.497Z"
+  }
+]

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "102ea94e-2c03-41bb-911d-4ee2649c07dd",
+    "name": "Front 100%",
+    "channelValues": [
+      {
+        "channel": 2,
+        "value": 255,
+        "patchId": "fa6b3e57-167f-4b41-a10b-fff99134f143",
+        "patchName": "Front Light 1",
+        "channelName": "Strobe Speed"
+      },
+      {
+        "channel": 5,
+        "value": 255,
+        "patchId": "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
+        "patchName": "Front Light 2",
+        "channelName": "Strobe Speed"
+      },
+      {
+        "channel": 8,
+        "value": 255,
+        "patchId": "095ce8b8-5288-4385-af48-1cb7139dd887",
+        "patchName": "Front Light 3",
+        "channelName": "Strobe Speed"
+      },
+      {
+        "channel": 11,
+        "value": 255,
+        "patchId": "30701834-9a51-453c-ae41-52d74a6648aa",
+        "patchName": "Front Light 4",
+        "channelName": "Strobe Speed"
+      },
+      {
+        "channel": 14,
+        "value": 255,
+        "patchId": "fd024afe-c473-4e24-8d64-7dcd068f511e",
+        "patchName": "Front Light 5",
+        "channelName": "Strobe Speed"
+      },
+      {
+        "channel": 17,
+        "value": 255,
+        "patchId": "1e75f34a-39ff-42fc-bf30-76736b175a1a",
+        "patchName": "Front Light 6",
+        "channelName": "Strobe Speed"
+      }
+    ],
+    "createdAt": "2025-08-12T14:24:15.700Z"
+  }
+]

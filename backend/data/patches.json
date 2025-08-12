@@ -1,0 +1,114 @@
+[
+  {
+    "id": "fa6b3e57-167f-4b41-a10b-fff99134f143",
+    "name": "Front Light 1",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "startAddress": 1,
+    "universe": 2,
+    "createdAt": "2025-08-12T13:04:40.607Z"
+  },
+  {
+    "id": "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
+    "name": "Front Light 2",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "startAddress": 4,
+    "universe": 2,
+    "createdAt": "2025-08-12T13:04:53.189Z"
+  },
+  {
+    "id": "095ce8b8-5288-4385-af48-1cb7139dd887",
+    "name": "Front Light 3",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "startAddress": 7,
+    "universe": 2,
+    "createdAt": "2025-08-12T13:07:31.358Z"
+  },
+  {
+    "id": "30701834-9a51-453c-ae41-52d74a6648aa",
+    "name": "Front Light 4",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "universe": 2,
+    "startAddress": 10,
+    "createdAt": "2025-08-12T13:20:53.199Z"
+  },
+  {
+    "id": "fd024afe-c473-4e24-8d64-7dcd068f511e",
+    "name": "Front Light 5",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "universe": 2,
+    "startAddress": 13,
+    "createdAt": "2025-08-12T13:20:53.199Z"
+  },
+  {
+    "id": "1e75f34a-39ff-42fc-bf30-76736b175a1a",
+    "name": "Front Light 6",
+    "templateId": "a1e3057a-6b1e-4e49-b193-062b3d29fba1",
+    "universe": 2,
+    "startAddress": 16,
+    "createdAt": "2025-08-12T13:20:53.199Z"
+  },
+  {
+    "id": "f3b088eb-a363-4818-a5df-1f24b95734df",
+    "name": "Back Light 1",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 19,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "d313517f-593b-4724-a6a5-228eac3d7e8d",
+    "name": "Back Light 2",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 28,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "a98d5284-8cee-4157-b708-eb5e583e5226",
+    "name": "Back Light 3",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 37,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "92254be8-7f2f-4128-b11b-b465d086cb2c",
+    "name": "Back Light 4",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 46,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "03bcb9b7-5f26-4e26-9156-90932a94fb36",
+    "name": "Back Light 5",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 55,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "b7d68b1e-f09a-4a92-ab34-727b6823cf89",
+    "name": "Back Light 6",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 64,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "c49b8d3a-04e4-478e-b8c3-08edb245ad9e",
+    "name": "Back Light 7",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 73,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  },
+  {
+    "id": "d4610f88-3800-40a4-8333-c61cf583caa3",
+    "name": "Back Light 8",
+    "templateId": "ace82c5b-5380-4b68-8c1a-5919cbf7aca9",
+    "universe": 2,
+    "startAddress": 82,
+    "createdAt": "2025-08-12T13:28:53.116Z"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "7051357a-f29c-47ae-b1d9-d085e63072d1",
+    "name": "Front Lights",
+    "patchIds": [
+      "fa6b3e57-167f-4b41-a10b-fff99134f143",
+      "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
+      "095ce8b8-5288-4385-af48-1cb7139dd887",
+      "fd024afe-c473-4e24-8d64-7dcd068f511e",
+      "1e75f34a-39ff-42fc-bf30-76736b175a1a",
+      "30701834-9a51-453c-ae41-52d74a6648aa"
+    ],
+    "color": "#3b82f6",
+    "createdAt": "2025-08-12T13:05:02.246Z"
+  },
+  {
+    "id": "f2f59020-1961-4b8a-896b-afafbd8921df",
+    "name": "Back Lights",
+    "patchIds": [
+      "f3b088eb-a363-4818-a5df-1f24b95734df",
+      "d313517f-593b-4724-a6a5-228eac3d7e8d",
+      "a98d5284-8cee-4157-b708-eb5e583e5226",
+      "92254be8-7f2f-4128-b11b-b465d086cb2c",
+      "03bcb9b7-5f26-4e26-9156-90932a94fb36",
+      "b7d68b1e-f09a-4a92-ab34-727b6823cf89",
+      "c49b8d3a-04e4-478e-b8c3-08edb245ad9e",
+      "d4610f88-3800-40a4-8333-c61cf583caa3"
+    ],
+    "color": "#3b82f6",
+    "createdAt": "2025-08-12T13:29:09.685Z"
+  }
+]

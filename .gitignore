@@ -1,0 +1,93 @@
+# macOS
+.DS_Store
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Angular
+.angular/
+.angular/cache/
+dist/
+frontend/dist/
+coverage/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Cache / temp
+.cache/
+tmp/
+temp/
+
+# Docker (local only artifacts)
+.docker/
+docker-data/
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out-tsc/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Angular
+.angular/
+
+# Docker
+.docker/
+
+# Temporary folders
+tmp/
+temp/
