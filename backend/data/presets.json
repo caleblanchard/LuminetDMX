@@ -1,51 +1,109 @@
 [
   {
-    "id": "102ea94e-2c03-41bb-911d-4ee2649c07dd",
+    "id": "5b33042a-19a3-411f-812b-13f70a5fcc0a",
     "name": "Front 100%",
     "channelValues": [
       {
-        "channel": 2,
+        "channel": 1,
         "value": 255,
         "patchId": "fa6b3e57-167f-4b41-a10b-fff99134f143",
         "patchName": "Front Light 1",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       },
       {
-        "channel": 5,
+        "channel": 4,
         "value": 255,
         "patchId": "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
         "patchName": "Front Light 2",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       },
       {
-        "channel": 8,
+        "channel": 7,
         "value": 255,
         "patchId": "095ce8b8-5288-4385-af48-1cb7139dd887",
         "patchName": "Front Light 3",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       },
       {
-        "channel": 11,
+        "channel": 10,
         "value": 255,
         "patchId": "30701834-9a51-453c-ae41-52d74a6648aa",
         "patchName": "Front Light 4",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       },
       {
-        "channel": 14,
+        "channel": 13,
         "value": 255,
         "patchId": "fd024afe-c473-4e24-8d64-7dcd068f511e",
         "patchName": "Front Light 5",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       },
       {
-        "channel": 17,
+        "channel": 16,
         "value": 255,
         "patchId": "1e75f34a-39ff-42fc-bf30-76736b175a1a",
         "patchName": "Front Light 6",
-        "channelName": "Strobe Speed"
+        "channelName": "Intensity"
       }
     ],
-    "createdAt": "2025-08-12T14:24:15.700Z"
+    "createdAt": "2025-08-12T15:51:06.172Z",
+    "fadeMs": 5000,
+    "updatedAt": "2025-08-12T16:19:26.274Z"
+  },
+  {
+    "id": "09f77dc7-ce06-42ae-aba0-6661995c7a1a",
+    "name": "Random",
+    "channelValues": [
+      {
+        "channel": 1,
+        "value": 255,
+        "patchId": "fa6b3e57-167f-4b41-a10b-fff99134f143",
+        "patchName": "Front Light 1",
+        "channelName": "Intensity"
+      },
+      {
+        "channel": 4,
+        "value": 131,
+        "patchId": "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
+        "patchName": "Front Light 2",
+        "channelName": "Intensity"
+      },
+      {
+        "channel": 6,
+        "value": 62,
+        "patchId": "b3e5d806-d09f-4cb6-9ad4-4443899dadea",
+        "patchName": "Front Light 2",
+        "channelName": "Dimmer Speed"
+      },
+      {
+        "channel": 9,
+        "value": 167,
+        "patchId": "095ce8b8-5288-4385-af48-1cb7139dd887",
+        "patchName": "Front Light 3",
+        "channelName": "Dimmer Speed"
+      },
+      {
+        "channel": 19,
+        "value": 255,
+        "patchId": "f3b088eb-a363-4818-a5df-1f24b95734df",
+        "patchName": "Back Light 1",
+        "channelName": "Red"
+      },
+      {
+        "channel": 20,
+        "value": 141,
+        "patchId": "f3b088eb-a363-4818-a5df-1f24b95734df",
+        "patchName": "Back Light 1",
+        "channelName": "Green"
+      },
+      {
+        "channel": 21,
+        "value": 89,
+        "patchId": "f3b088eb-a363-4818-a5df-1f24b95734df",
+        "patchName": "Back Light 1",
+        "channelName": "Blue"
+      }
+    ],
+    "createdAt": "2025-08-12T19:47:27.681Z"
   }
 ]
