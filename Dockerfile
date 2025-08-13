@@ -14,6 +14,10 @@ COPY backend/package*.json ./
 RUN npm ci --only=production
 COPY backend/ .
 
+RUN apk add --no-cache tzdata
+
+RUN ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime
+
 # Copy built frontend into backend public directory
 COPY --from=frontend-builder /frontend/dist/luminet-dmx /app/public
 
