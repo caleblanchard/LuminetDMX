@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    container_name: luminet-dmx
     ports:
       - "80:3000"
     environment:
@@ -9,7 +10,8 @@ services:
     volumes:
       - luminet-data:/app/data
     networks:
-      - av-macvlan-net
+      av-macvlan-net:
+        ipv4_address: 10.0.110.97
 
 volumes:
   luminet-data:
