@@ -645,6 +645,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   
   private dmxSubscription: Subscription | null = null;
   private clearAllListener: ((event: Event) => void) | null = null;
+  private isFading = false;
   dmxMode: 'HTP' | 'LTP' = 'HTP';
   resizingElement: { type: 'button' | 'fader', id: string } | null = null;
 
@@ -692,6 +693,11 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   private sendDmxValues(dmxValues: Map<number, number>): void {
+    // Don't send DMX values if we're in the middle of a fade operation
+    if (this.isFading) {
+      return;
+    }
+    
     // Convert to array format expected by backend
     const channels: { channel: number; value: number }[] = [];
     for (const [channel, value] of dmxValues) {
@@ -1047,11 +1053,11 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   private applyButtonWithFade(button: VirtualButton): void {
-    // For fade to work properly, we need to calculate what the final state should be
-    // without using the DMX calculation service until after the fade completes
+    // Set fading flag to prevent automatic DMX sending
+    this.isFading = true;
     
-    // First, temporarily update the DMX calculation service to reflect the new button state
-    // but capture what the target values should be
+    // Update the DMX calculation service to reflect the new button state
+    // This won't send values to backend because of the fading flag
     this.updateDmxCalculation();
     
     // Get the target values that the DMX calculation service would produce
@@ -1067,14 +1073,19 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
       // Send with fade to backend
       this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
         next: () => {
-          // Fade completed successfully - the DMX calculation service is already up to date
+          // Fade completed successfully
+          this.isFading = false;
           console.log(`Button "${button.name}" fade completed`);
         },
         error: (error) => {
+          // Reset fading flag even on error
+          this.isFading = false;
           console.error('Error applying button with fade:', error);
-          // The DMX calculation service is already updated, so we're in a consistent state
         }
       });
+    } else {
+      // No channels to fade, just reset the flag
+      this.isFading = false;
     }
   }
 
