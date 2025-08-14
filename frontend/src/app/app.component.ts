@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ConfirmModalComponent } from './components/confirm-modal/confirm-modal.component';
 import { WebsocketService } from './services/websocket.service';
 import { ApiService } from './services/api.service';
+import { BlackoutService } from './services/blackout.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -18,6 +20,12 @@ import { ApiService } from './services/api.service';
         
         <ul class="nav-menu">
           <li>
+            <a routerLink="/virtual-console" routerLinkActive="active">
+              <span class="icon">🎛️</span>
+              Virtual Console
+            </a>
+          </li>
+          <li>
             <a routerLink="/light-control" routerLinkActive="active">
               <span class="icon">🎨</span>
               Light Control
@@ -31,7 +39,7 @@ import { ApiService } from './services/api.service';
           </li>
           <li>
             <a routerLink="/console" routerLinkActive="active">
-              <span class="icon">🎛️</span>
+              <span class="icon">🎚️</span>
               Console
             </a>
           </li>
@@ -71,8 +79,16 @@ import { ApiService } from './services/api.service';
       
       <main class="main-content">
         <router-outlet></router-outlet>
-        <button class="floating-blackout" (click)="triggerBlackout()" title="Blackout (all channels to 0)">⛔</button>
-        <div class="blackout-tooltip">Blackout</div>
+        <button class="floating-blackout" 
+                [class.active]="isBlackedOut"
+                (click)="toggleBlackout()" 
+                [title]="isBlackedOut ? 'Restore from Blackout' : 'Blackout (all channels to 0)'">
+          {{ isBlackedOut ? '🔆' : '⛔' }}
+        </button>
+        <div class="blackout-tooltip">{{ isBlackedOut ? 'Restore' : 'Blackout' }}</div>
+        
+        <button class="floating-clear-all" (click)="clearAll()" title="Clear All Channels">🧹</button>
+        <div class="clear-all-tooltip">Clear All</div>
         <app-confirm-modal></app-confirm-modal>
       </main>
     </div>
@@ -205,6 +221,38 @@ import { ApiService } from './services/api.service';
       background: #dc2626;
     }
 
+    .floating-blackout.active {
+      background: #f59e0b;
+      box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .floating-blackout.active:hover {
+      background: #d97706;
+    }
+
+    .floating-clear-all {
+      position: fixed;
+      right: 24px;
+      bottom: 100px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: #6366f1;
+      color: white;
+      font-size: 22px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      cursor: pointer;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .floating-clear-all:hover {
+      background: #4f46e5;
+    }
+
     .blackout-tooltip {
       position: fixed;
       right: 26px;
@@ -220,7 +268,23 @@ import { ApiService } from './services/api.service';
       display: none;
     }
 
+    .clear-all-tooltip {
+      position: fixed;
+      right: 26px;
+      bottom: 162px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1100;
+      display: none;
+    }
+
     .floating-blackout:hover + .blackout-tooltip { display: block; }
+    .floating-clear-all:hover + .clear-all-tooltip { display: block; }
 
     @media (max-width: 768px) {
       .sidebar {
@@ -286,26 +350,62 @@ import { ApiService } from './services/api.service';
         font-size: 18px;
       }
       
+      .floating-clear-all {
+        bottom: 160px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+      }
+      
       .blackout-tooltip {
         right: 18px;
         bottom: 154px;
         font-size: 11px;
         padding: 4px 8px;
       }
+      
+      .clear-all-tooltip {
+        right: 18px;
+        bottom: 214px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
     }
   `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
   isConnected = false;
+  isBlackedOut = false;
+  private blackoutSubscription: Subscription | null = null;
 
-  constructor(private websocketService: WebsocketService, private api: ApiService) {
+  constructor(
+    private websocketService: WebsocketService, 
+    private api: ApiService,
+    private blackoutService: BlackoutService
+  ) {
     this.websocketService.connectionStatus$.subscribe(
       status => this.isConnected = status
     );
   }
 
-  triggerBlackout(): void {
-    const fadeMs = 0; // adjust if you want a default fade
-    this.api.blackout(fadeMs).subscribe();
+  ngOnInit(): void {
+    this.blackoutSubscription = this.blackoutService.blackoutState$.subscribe(
+      state => this.isBlackedOut = state
+    );
+  }
+
+  ngOnDestroy(): void {
+    if (this.blackoutSubscription) {
+      this.blackoutSubscription.unsubscribe();
+    }
+  }
+
+  toggleBlackout(): void {
+    this.blackoutService.toggleBlackout();
+  }
+
+  clearAll(): void {
+    this.blackoutService.clearAll();
   }
 }

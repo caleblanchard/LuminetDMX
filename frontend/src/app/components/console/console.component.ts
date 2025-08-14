@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { WebsocketService } from '../../services/websocket.service';
+import { BlackoutService } from '../../services/blackout.service';
 import { Patch, Group, FixtureTemplate, FixtureChannel, Preset, PresetChannelValue } from '../../models/fixture.model';
 import { Subscription } from 'rxjs';
 
@@ -37,7 +38,13 @@ interface FaderChannel {
               Groups
             </button>
           </div>
-          <button class="btn btn-danger" (click)="blackout()">Blackout</button>
+          <button class="btn" 
+                  [class.btn-danger]="!isBlackedOut" 
+                  [class.btn-warning]="isBlackedOut"
+                  (click)="toggleBlackout()">
+            {{ isBlackedOut ? 'Restore' : 'Blackout' }}
+          </button>
+          <button class="btn btn-primary" (click)="clearAll()">Clear All</button>
           <button class="btn btn-secondary" (click)="fullOn()">Full On</button>
           <button class="btn btn-success" (click)="saveAsPreset()">Save as Preset</button>
         </div>
@@ -535,15 +542,18 @@ export class ConsoleComponent implements OnInit, OnDestroy {
   presetChannelData: PresetChannelValue[] = [];
   
   private subscriptions: Subscription[] = [];
+  isBlackedOut = false;
 
   constructor(
     private apiService: ApiService,
-    private websocketService: WebsocketService
+    private websocketService: WebsocketService,
+    private blackoutService: BlackoutService
   ) {}
 
   ngOnInit(): void {
     this.loadData();
     this.subscribeToWebSocket();
+    this.subscribeToBlackoutState();
   }
 
   ngOnDestroy(): void {
@@ -554,6 +564,8 @@ export class ConsoleComponent implements OnInit, OnDestroy {
     this.apiService.getPatches().subscribe(patches => {
       this.patches = patches;
       this.buildChannelSections();
+      // Load current DMX values after channel sections are built
+      this.loadCurrentDmxValues();
     });
 
     this.apiService.getGroups().subscribe(groups => {
@@ -579,6 +591,28 @@ export class ConsoleComponent implements OnInit, OnDestroy {
       }
     );
     this.subscriptions.push(dmxSub);
+  }
+
+  subscribeToBlackoutState(): void {
+    const blackoutSub = this.blackoutService.blackoutState$.subscribe(
+      state => this.isBlackedOut = state
+    );
+    this.subscriptions.push(blackoutSub);
+  }
+
+  loadCurrentDmxValues(): void {
+    // Load current DMX values when console opens to sync with virtual console state
+    this.apiService.getDmxValues().subscribe(
+      values => {
+        // Directly assign the array - it's already in the correct format
+        this.dmxValues = values;
+        this.updateFaderValues();
+        this.logDebug('Initial DMX values loaded from backend', this.dmxValues);
+      },
+      error => {
+        console.error('Error loading current DMX values:', error);
+      }
+    );
   }
 
   buildChannelSections(): void {
@@ -719,16 +753,12 @@ export class ConsoleComponent implements OnInit, OnDestroy {
     }
   }
 
-  blackout(): void {
-    this.logDebug('Executing blackout - setting all channels to 0');
-    const channelUpdates: { channel: number; value: number }[] = [];
-    for (let i = 1; i <= 512; i++) {
-      channelUpdates.push({ channel: i, value: 0 });
-    }
-    this.apiService.setMultipleDmxChannels(channelUpdates).subscribe(
-      response => this.logDebug('Blackout completed', response),
-      error => this.logDebug('Blackout failed', error)
-    );
+  toggleBlackout(): void {
+    this.blackoutService.toggleBlackout();
+  }
+
+  clearAll(): void {
+    this.blackoutService.clearAll();
   }
 
   fullOn(): void {

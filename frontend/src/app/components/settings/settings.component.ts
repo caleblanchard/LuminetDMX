@@ -155,6 +155,15 @@ import { UniverseConfig } from '../../models/fixture.model';
               </label>
               <div class="setting-help">Display DMX channel numbers on faders</div>
             </div>
+            
+            <div class="setting-item">
+              <label class="label">DMX Channel Mode</label>
+              <select class="input" [(ngModel)]="settings.dmxMode" name="dmxMode">
+                <option value="HTP">HTP (Highest Takes Precedence)</option>
+                <option value="LTP">LTP (Last Takes Precedence)</option>
+              </select>
+              <div class="setting-help">Determines how overlapping DMX channels are handled when multiple presets are active</div>
+            </div>
           </div>
           
           <div class="form-actions">
@@ -323,7 +332,8 @@ export class SettingsComponent implements OnInit {
   settings = {
     enableLogging: false,
     autoReconnect: true,
-    showChannelNumbers: true
+    showChannelNumbers: true,
+    dmxMode: 'HTP' as 'HTP' | 'LTP'
   };
 
   isConnected = false;
@@ -371,6 +381,11 @@ export class SettingsComponent implements OnInit {
   saveAdvancedSettings(): void {
     localStorage.setItem('luminetDmxSettings', JSON.stringify(this.settings));
     
+    // Trigger a custom event to notify other services of settings change
+    window.dispatchEvent(new CustomEvent('luminetDmxSettingsChanged', { 
+      detail: this.settings 
+    }));
+    
     if (this.settings.enableLogging) {
       console.log('[LuminetDMX Settings] Debug logging enabled - you should now see debug messages in the console');
       console.log('[LuminetDMX Settings] Current settings:', this.settings);
@@ -392,7 +407,8 @@ export class SettingsComponent implements OnInit {
         this.settings = {
           enableLogging: false,
           autoReconnect: true,
-          showChannelNumbers: true
+          showChannelNumbers: true,
+          dmxMode: 'HTP' as 'HTP' | 'LTP'
         };
 
         this.universeConfig = {

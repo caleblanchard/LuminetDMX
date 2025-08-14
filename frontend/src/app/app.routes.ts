@@ -1,7 +1,11 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/console', pathMatch: 'full' },
+  { path: '', redirectTo: '/virtual-console', pathMatch: 'full' },
+  { 
+    path: 'virtual-console', 
+    loadComponent: () => import('./components/virtual-console/virtual-console.component').then(c => c.VirtualConsoleComponent)
+  },
   { 
     path: 'console', 
     loadComponent: () => import('./components/console/console.component').then(c => c.ConsoleComponent)
