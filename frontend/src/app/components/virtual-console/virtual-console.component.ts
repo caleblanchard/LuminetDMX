@@ -1056,36 +1056,80 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     // Set fading flag to prevent automatic DMX sending
     this.isFading = true;
     
-    // Update the DMX calculation service to reflect the new button state
-    // This won't send values to backend because of the fading flag
-    this.updateDmxCalculation();
-    
-    // Get the target values that the DMX calculation service would produce
-    const currentDmxMap = this.dmxCalculation.getCurrentDmxValues();
-    const channels: { channel: number; value: number }[] = [];
-    
-    // Convert the map to the array format expected by the API
-    for (const [channel, value] of currentDmxMap) {
-      channels.push({ channel, value });
-    }
-    
-    if (channels.length > 0) {
-      // Send with fade to backend
-      this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
-        next: () => {
-          // Fade completed successfully
-          this.isFading = false;
-          console.log(`Button "${button.name}" fade completed`);
-        },
-        error: (error) => {
-          // Reset fading flag even on error
-          this.isFading = false;
-          console.error('Error applying button with fade:', error);
+    // For button deactivation, we need to explicitly get the channels that should fade to zero
+    if (!button.isActive) {
+      // Get the channels that this button was controlling before deactivation
+      const buttonChannels = new Set<number>();
+      for (const presetId of button.presetIds) {
+        const preset = this.presets.find(p => p.id === presetId);
+        if (preset) {
+          preset.channelValues.forEach(cv => {
+            buttonChannels.add(cv.channel);
+          });
         }
-      });
+      }
+      
+      // Update the DMX calculation service to reflect the button being off
+      this.updateDmxCalculation();
+      
+      // Get what the final state should be
+      const targetDmxMap = this.dmxCalculation.getCurrentDmxValues();
+      
+      // Build the channel list, ensuring we include the button's channels even if they go to zero
+      const channels: { channel: number; value: number }[] = [];
+      
+      // Add all channels from the DMX calculation service
+      for (const [channel, value] of targetDmxMap) {
+        channels.push({ channel, value });
+      }
+      
+      // Ensure all of this button's channels are included (they should fade to their target value, likely 0)
+      for (const channel of buttonChannels) {
+        if (!targetDmxMap.has(channel)) {
+          // This channel isn't controlled by any other element, so it should go to 0
+          channels.push({ channel, value: 0 });
+        }
+      }
+      
+      if (channels.length > 0) {
+        this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
+          next: () => {
+            this.isFading = false;
+            console.log(`Button "${button.name}" fade-out completed`);
+          },
+          error: (error) => {
+            this.isFading = false;
+            console.error('Error applying button fade-out:', error);
+          }
+        });
+      } else {
+        this.isFading = false;
+      }
     } else {
-      // No channels to fade, just reset the flag
-      this.isFading = false;
+      // Button activation - use the existing logic
+      this.updateDmxCalculation();
+      
+      const currentDmxMap = this.dmxCalculation.getCurrentDmxValues();
+      const channels: { channel: number; value: number }[] = [];
+      
+      for (const [channel, value] of currentDmxMap) {
+        channels.push({ channel, value });
+      }
+      
+      if (channels.length > 0) {
+        this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
+          next: () => {
+            this.isFading = false;
+            console.log(`Button "${button.name}" fade-in completed`);
+          },
+          error: (error) => {
+            this.isFading = false;
+            console.error('Error applying button fade-in:', error);
+          }
+        });
+      } else {
+        this.isFading = false;
+      }
     }
   }
 
