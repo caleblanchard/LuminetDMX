@@ -19,40 +19,16 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
       </div>
 
       <div class="presets-grid" *ngIf="!showAddForm && !editingPreset">
-        <div class="card preset-card" *ngFor="let preset of presets">
-          <div class="preset-header">
-            <h3>{{ preset.name }}</h3>
-            <div class="preset-meta">
-              <span class="channel-count">{{ preset.channelValues.length }} channels</span>
-              <span class="created-date">{{ formatDate(preset.createdAt) }}</span>
-              <span class="fade" *ngIf="preset.fadeMs !== undefined && preset.fadeMs !== null">Fade: {{ preset.fadeMs }} ms</span>
-            </div>
+        <div class="preset-square" *ngFor="let preset of presets" 
+             [class.active]="isActive(preset)"
+             (click)="togglePreset(preset)">
+          <div class="preset-content">
+            <div class="preset-name">{{ preset.name }}</div>
+            <div class="preset-status">{{ isActive(preset) ? 'ON' : 'OFF' }}</div>
           </div>
-          
-          <div class="preset-description" *ngIf="preset.description">
-            <p>{{ preset.description }}</p>
-          </div>
-          
-          <div class="preset-preview">
-            <div class="channel-preview">
-              <div class="channel-value" 
-                   *ngFor="let channel of getPreviewChannels(preset); let i = index"
-                   [style.width.%]="(channel.value / 255) * 100"
-                   [title]="getChannelTitle(channel)">
-                <span class="channel-label">{{ channel.channel }}</span>
-              </div>
-            </div>
-            <div class="preview-info" *ngIf="preset.channelValues.length > 8">
-              +{{ preset.channelValues.length - 8 }} more channels
-            </div>
-          </div>
-          
-          <div class="preset-actions">
-            <button class="btn btn-primary toggle" (click)="togglePreset(preset)" [class.active]="isActive(preset)">
-              {{ isActive(preset) ? 'On' : 'Off' }}
-            </button>
-            <button class="btn btn-secondary" (click)="editPreset(preset)">Edit</button>
-            <button class="btn btn-danger" (click)="deletePreset(preset.id)">Delete</button>
+          <div class="preset-actions" (click)="$event.stopPropagation()">
+            <button class="action-btn edit-btn" (click)="editPreset(preset)" title="Edit">✏️</button>
+            <button class="action-btn delete-btn" (click)="deletePreset(preset.id)" title="Delete">🗑️</button>
           </div>
         </div>
       </div>
@@ -156,102 +132,107 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
 
     .presets-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      padding: 8px 0;
     }
 
-    .preset-card {
-      transition: transform 0.2s ease;
+    .preset-square {
+      aspect-ratio: 1;
+      background: rgba(30, 41, 59, 0.6);
+      border: 2px solid rgba(148, 163, 184, 0.1);
+      border-radius: 12px;
       position: relative;
-    }
-
-    .preset-card:hover {
-      transform: translateY(-4px);
-    }
-
-    .preset-header h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #e2e8f0;
-    }
-
-    .preset-meta {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .preset-meta .fade { color: #94a3b8; font-size: 12px; }
-
-    .channel-count {
-      font-size: 12px;
-      color: #3b82f6;
-      background: rgba(59, 130, 246, 0.1);
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 500;
-    }
-
-    .created-date {
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    .preset-description {
-      margin-bottom: 16px;
-    }
-
-    .preset-description p {
-      font-size: 14px;
-      color: #cbd5e1;
-      line-height: 1.4;
-      margin: 0;
-    }
-
-    .preset-preview {
-      background: rgba(15, 23, 42, 0.5);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-    }
-
-    .channel-preview {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 8px;
-      height: 30px;
-    }
-
-    .channel-value {
-      background: linear-gradient(45deg, #3b82f6, #60a5fa);
-      border-radius: 3px;
-      position: relative;
-      min-width: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      cursor: pointer;
       transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
     }
 
-    .channel-label {
-      font-size: 10px;
-      color: white;
+    .preset-square:hover {
+      transform: translateY(-2px);
+      border-color: rgba(59, 130, 246, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .preset-square.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .preset-content {
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preset-name {
+      font-size: 14px;
       font-weight: 600;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    }
-
-    .preview-info {
-      font-size: 12px;
-      color: #94a3b8;
+      color: #e2e8f0;
+      line-height: 1.3;
+      word-break: break-word;
       text-align: center;
     }
 
-    .preset-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
+    .preset-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+      transition: all 0.2s ease;
     }
-    .btn.toggle.active { background: #10b981; }
+
+    .preset-square.active .preset-status {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .preset-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .preset-square:hover .preset-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      background: rgba(15, 23, 42, 0.8);
+      border: none;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
 
     .form-container {
       max-width: 800px;
@@ -402,7 +383,21 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
 
     @media (max-width: 768px) {
       .presets-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+      }
+      
+      .preset-square {
+        padding: 12px;
+      }
+      
+      .preset-name {
+        font-size: 13px;
+      }
+      
+      .preset-status {
+        font-size: 11px;
+        padding: 3px 6px;
       }
       
       .page-header {
@@ -418,10 +413,26 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
       .channels-grid {
         grid-template-columns: 1fr;
       }
+    }
 
-      .preset-actions {
-        flex-wrap: wrap;
-        justify-content: center;
+    @media (max-width: 480px) {
+      .presets-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 8px;
+      }
+      
+      .preset-square {
+        padding: 8px;
+      }
+      
+      .preset-name {
+        font-size: 12px;
+      }
+      
+      .action-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
       }
     }
   `]

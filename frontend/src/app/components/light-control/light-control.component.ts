@@ -62,19 +62,15 @@ interface ColorControl {
 
       <!-- Light Selection Grid -->
       <div class="lights-grid">
-        <div class="light-card" 
+        <div class="light-square" 
              *ngFor="let light of lights" 
              [class.selected]="light.selected"
-             (click)="toggleLight(light)">
-          <div class="light-header">
+             (click)="toggleLight(light)"
+             [title]="light.patch.name + ' - ' + light.template.name + ' (U' + light.patch.universe + ' Ch' + light.patch.startAddress + '-' + getEndAddress(light) + ')'">
+          <div class="light-content">
             <div class="light-name">{{ light.patch.name }}</div>
-            <div class="light-template">{{ light.template.name }}</div>
-          </div>
-          <div class="light-info">
-            <div class="address-info">
-              U{{ light.patch.universe }} • Ch {{ light.patch.startAddress }}-{{ getEndAddress(light) }}
-            </div>
-            <div class="channel-count">{{ light.template.channelCount }} channels</div>
+            <div class="light-address">U{{ light.patch.universe }}</div>
+            <div class="channel-range">{{ light.patch.startAddress }}-{{ getEndAddress(light) }}</div>
           </div>
           <div class="selection-indicator" *ngIf="light.selected">✓</div>
         </div>
@@ -304,45 +300,66 @@ interface ColorControl {
 
     .lights-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
     }
 
-    .light-card {
+    .light-square {
+      aspect-ratio: 1;
       background: rgba(30, 41, 59, 0.6);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 8px;
+      padding: 8px;
       border: 2px solid rgba(148, 163, 184, 0.1);
       cursor: pointer;
       transition: all 0.2s ease;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
-    .light-card:hover {
+    .light-square:hover {
       border-color: rgba(59, 130, 246, 0.3);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
-    .light-card.selected {
+    .light-square.selected {
       border-color: #3b82f6;
-      background: rgba(59, 130, 246, 0.1);
+      background: rgba(59, 130, 246, 0.15);
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.3);
     }
 
-    .light-header {
-      margin-bottom: 12px;
+    .light-content {
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
     }
 
     .light-name {
-      font-size: 16px;
+      font-size: 11px;
       font-weight: 600;
       color: #e2e8f0;
-      margin-bottom: 4px;
+      line-height: 1.2;
+      word-break: break-word;
+      text-align: center;
     }
 
-    .light-template {
-      font-size: 14px;
+    .light-address {
+      font-size: 9px;
       color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .channel-range {
+      font-size: 8px;
+      color: #64748b;
+      font-family: 'Courier New', monospace;
     }
 
     .light-info {
@@ -364,18 +381,19 @@ interface ColorControl {
 
     .selection-indicator {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 24px;
-      height: 24px;
-      background: #3b82f6;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      background: #10b981;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .control-panel {
@@ -688,7 +706,32 @@ interface ColorControl {
       }
 
       .lights-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        gap: 8px;
+      }
+      
+      .light-square {
+        padding: 6px;
+      }
+      
+      .light-name {
+        font-size: 10px;
+      }
+      
+      .light-address {
+        font-size: 8px;
+      }
+      
+      .channel-range {
+        font-size: 7px;
+      }
+      
+      .selection-indicator {
+        width: 16px;
+        height: 16px;
+        top: 3px;
+        right: 3px;
+        font-size: 10px;
       }
 
       .parameters-grid {

@@ -277,6 +277,21 @@ import { ApiService } from './services/api.service';
       .main-content {
         padding-bottom: 80px;
       }
+      
+      .floating-blackout {
+        bottom: 100px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+      }
+      
+      .blackout-tooltip {
+        right: 18px;
+        bottom: 154px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
     }
   `]
 })
