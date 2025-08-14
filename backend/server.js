@@ -614,17 +614,28 @@ app.post('/api/dmx/set-channel', (req, res) => {
 });
 
 app.post('/api/dmx/set-multiple', (req, res) => {
-  const { channels } = req.body;
+  const { channels, fadeMs } = req.body;
   
-  for (const { channel, value } of channels) {
-    if (channel >= 1 && channel <= 512 && value >= 0 && value <= 255) {
-      dmxValues[channel - 1] = value;
+  if (fadeMs && fadeMs > 0) {
+    // Use fade functionality
+    const targets = channels
+      .filter(({ channel, value }) => channel >= 1 && channel <= 512 && value >= 0 && value <= 255)
+      .map(({ channel, value }) => ({ channel, value }));
+    
+    applyChannelValuesWithFade(targets, fadeMs);
+    res.json({ message: 'Channels updated with fade', fadeMs });
+  } else {
+    // Instant update (existing behavior)
+    for (const { channel, value } of channels) {
+      if (channel >= 1 && channel <= 512 && value >= 0 && value <= 255) {
+        dmxValues[channel - 1] = value;
+      }
     }
+    
+    db.saveDmxValues(dmxValues);
+    broadcastDMX();
+    res.json({ message: 'Channels updated' });
   }
-  
-  db.saveDmxValues(dmxValues);
-  broadcastDMX();
-  res.json({ message: 'Channels updated' });
 });
 
 app.get('/api/dmx/values', (req, res) => {
