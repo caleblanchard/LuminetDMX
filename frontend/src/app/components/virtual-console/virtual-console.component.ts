@@ -17,6 +17,7 @@ interface VirtualButton {
   height: number;
   isActive: boolean;
   activatedAt?: number;
+  fadeMs?: number;
 }
 
 interface VirtualFader {
@@ -174,6 +175,16 @@ interface VirtualConsoleLayout {
                 </div>
               </div>
             </div>
+            <div class="form-group" *ngIf="newElement.type === 'button'">
+              <label>Fade Duration (ms)</label>
+              <input type="number" 
+                     [(ngModel)]="newElement.fadeMs" 
+                     class="input" 
+                     placeholder="e.g. 1000 (optional)"
+                     min="0" 
+                     step="50">
+              <div class="form-help">Duration for fade in/out transitions when button is pressed. Leave empty for instant changes.</div>
+            </div>
           </div>
           <div class="modal-actions">
             <button class="btn btn-secondary" (click)="showAddModal = false">Cancel</button>
@@ -203,6 +214,16 @@ interface VirtualConsoleLayout {
                   </label>
                 </div>
               </div>
+            </div>
+            <div class="form-group" *ngIf="selectedElement?.type === 'button'">
+              <label>Fade Duration (ms)</label>
+              <input type="number" 
+                     [(ngModel)]="editingElement.fadeMs" 
+                     class="input" 
+                     placeholder="e.g. 1000 (optional)"
+                     min="0" 
+                     step="50">
+              <div class="form-help">Duration for fade in/out transitions when button is pressed. Leave empty for instant changes.</div>
             </div>
           </div>
           <div class="modal-actions">
@@ -538,6 +559,13 @@ interface VirtualConsoleLayout {
       color: #cbd5e1;
     }
 
+    .form-help {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
     .preset-selection {
       max-height: 200px;
       overflow-y: auto;
@@ -602,7 +630,8 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   newElement = {
     type: 'button' as 'button' | 'fader',
     name: '',
-    presetIds: [] as string[]
+    presetIds: [] as string[],
+    fadeMs: undefined as number | undefined
   };
   
   editingElement: any = {};
@@ -1006,8 +1035,47 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     button.isActive = !button.isActive;
     button.activatedAt = button.isActive ? Date.now() : undefined;
     
-    this.updateDmxCalculation();
+    // If button has fade duration and is being activated, handle fade directly
+    if (button.fadeMs && button.fadeMs > 0 && button.isActive) {
+      this.applyButtonWithFade(button);
+    } else {
+      // Normal DMX calculation for instant changes or button deactivation
+      this.updateDmxCalculation();
+    }
+    
     this.saveControlStates();
+  }
+
+  private applyButtonWithFade(button: VirtualButton): void {
+    // Calculate target DMX values for this button's presets
+    const channels: { channel: number; value: number }[] = [];
+    
+    for (const presetId of button.presetIds) {
+      const preset = this.presets.find(p => p.id === presetId);
+      if (preset) {
+        preset.channelValues.forEach(cv => {
+          channels.push({ channel: cv.channel, value: cv.value });
+        });
+      }
+    }
+    
+    if (channels.length > 0) {
+      // Send with fade to backend
+      this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
+        next: () => {
+          // After fade completes, update the DMX calculation service
+          this.updateDmxCalculation();
+        },
+        error: (error) => {
+          console.error('Error applying button with fade:', error);
+          // Fallback to normal calculation
+          this.updateDmxCalculation();
+        }
+      });
+    } else {
+      // No channels to fade, just update normally
+      this.updateDmxCalculation();
+    }
   }
 
   onFaderChange(fader: VirtualFader): void {
@@ -1076,7 +1144,8 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
         y: 50,
         width: 120,
         height: 80,
-        isActive: false
+        isActive: false,
+        fadeMs: this.newElement.fadeMs
       };
       this.layout.buttons.push(button);
     } else {
@@ -1096,7 +1165,8 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     this.newElement = {
       type: 'button',
       name: '',
-      presetIds: []
+      presetIds: [],
+      fadeMs: undefined
     };
     
     this.showAddModal = false;
@@ -1114,6 +1184,11 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
       if (element) {
         element.name = this.editingElement.name;
         element.presetIds = [...this.editingElement.presetIds];
+        
+        // Only update fadeMs for buttons
+        if (this.selectedElement.type === 'button' && 'fadeMs' in element) {
+          (element as VirtualButton).fadeMs = this.editingElement.fadeMs;
+        }
       }
     }
     

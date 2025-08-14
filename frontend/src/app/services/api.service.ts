@@ -133,9 +133,13 @@ export class ApiService {
     );
   }
 
-  setMultipleDmxChannels(channels: { channel: number; value: number }[]): Observable<any> {
-    this.logDebug(`API: Setting ${channels.length} DMX channels`, channels);
-    return this.http.post(`${this.baseUrl}/dmx/set-multiple`, { channels }).pipe(
+  setMultipleDmxChannels(channels: { channel: number; value: number }[], fadeMs?: number): Observable<any> {
+    this.logDebug(`API: Setting ${channels.length} DMX channels${fadeMs ? ` with ${fadeMs}ms fade` : ''}`, channels);
+    const body: any = { channels };
+    if (fadeMs !== undefined && fadeMs > 0) {
+      body.fadeMs = fadeMs;
+    }
+    return this.http.post(`${this.baseUrl}/dmx/set-multiple`, body).pipe(
       tap(response => this.logDebug(`API: Multiple DMX channels set successfully`, response))
     );
   }
