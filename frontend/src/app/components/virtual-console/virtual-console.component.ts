@@ -1065,7 +1065,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   addElement(): void {
-    const id = crypto.randomUUID();
+    const id = this.generateUUID();
     
     if (this.newElement.type === 'button') {
       const button: VirtualButton = {
@@ -1147,6 +1147,20 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
         this.saveControlStates();
         this.updateDmxCalculation();
       }
+    });
+  }
+
+  private generateUUID(): string {
+    // Try to use crypto.randomUUID if available
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    
+    // Fallback to manual UUID generation
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
     });
   }
 }
