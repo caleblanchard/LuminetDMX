@@ -19,7 +19,7 @@ RUN apk add --no-cache tzdata
 RUN ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime
 
 # Copy built frontend into backend public directory
-COPY --from=frontend-builder /frontend/dist/luminet-dmx /app/public
+COPY --from=frontend-builder /frontend/dist/luminet-dmx/browser /app/public
 
 EXPOSE 3000
 CMD ["node", "server.js"]
