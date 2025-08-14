@@ -183,7 +183,7 @@ interface VirtualConsoleLayout {
                      placeholder="e.g. 1000 (optional)"
                      min="0" 
                      step="50">
-              <div class="form-help">Duration for fade in/out transitions when button is pressed. Leave empty for instant changes.</div>
+              <div class="form-help">Duration for fade in/out transitions when button is pressed or released. Leave empty for instant changes.</div>
             </div>
           </div>
           <div class="modal-actions">
@@ -223,7 +223,7 @@ interface VirtualConsoleLayout {
                      placeholder="e.g. 1000 (optional)"
                      min="0" 
                      step="50">
-              <div class="form-help">Duration for fade in/out transitions when button is pressed. Leave empty for instant changes.</div>
+              <div class="form-help">Duration for fade in/out transitions when button is pressed or released. Leave empty for instant changes.</div>
             </div>
           </div>
           <div class="modal-actions">
@@ -1035,11 +1035,11 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     button.isActive = !button.isActive;
     button.activatedAt = button.isActive ? Date.now() : undefined;
     
-    // If button has fade duration and is being activated, handle fade directly
-    if (button.fadeMs && button.fadeMs > 0 && button.isActive) {
+    // If button has fade duration, handle fade directly for both on and off
+    if (button.fadeMs && button.fadeMs > 0) {
       this.applyButtonWithFade(button);
     } else {
-      // Normal DMX calculation for instant changes or button deactivation
+      // Normal DMX calculation for instant changes
       this.updateDmxCalculation();
     }
     
@@ -1047,34 +1047,34 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   private applyButtonWithFade(button: VirtualButton): void {
-    // Calculate target DMX values for this button's presets
+    // For fade to work properly, we need to calculate what the final state should be
+    // without using the DMX calculation service until after the fade completes
+    
+    // First, temporarily update the DMX calculation service to reflect the new button state
+    // but capture what the target values should be
+    this.updateDmxCalculation();
+    
+    // Get the target values that the DMX calculation service would produce
+    const currentDmxMap = this.dmxCalculation.getCurrentDmxValues();
     const channels: { channel: number; value: number }[] = [];
     
-    for (const presetId of button.presetIds) {
-      const preset = this.presets.find(p => p.id === presetId);
-      if (preset) {
-        preset.channelValues.forEach(cv => {
-          channels.push({ channel: cv.channel, value: cv.value });
-        });
-      }
+    // Convert the map to the array format expected by the API
+    for (const [channel, value] of currentDmxMap) {
+      channels.push({ channel, value });
     }
     
     if (channels.length > 0) {
       // Send with fade to backend
       this.apiService.setMultipleDmxChannels(channels, button.fadeMs).subscribe({
         next: () => {
-          // After fade completes, update the DMX calculation service
-          this.updateDmxCalculation();
+          // Fade completed successfully - the DMX calculation service is already up to date
+          console.log(`Button "${button.name}" fade completed`);
         },
         error: (error) => {
           console.error('Error applying button with fade:', error);
-          // Fallback to normal calculation
-          this.updateDmxCalculation();
+          // The DMX calculation service is already updated, so we're in a consistent state
         }
       });
-    } else {
-      // No channels to fade, just update normally
-      this.updateDmxCalculation();
     }
   }
 
