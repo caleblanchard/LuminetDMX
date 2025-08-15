@@ -1,0 +1,686 @@
+openapi: 3.0.3
+info:
+  title: LuminetDMX API
+  description: |
+    LuminetDMX provides a comprehensive REST API for external integrations, allowing you to control lighting systems from external applications, automation systems, or custom scripts.
+    
+    ## Key Features
+    - Control DMX lighting fixtures via Art-Net protocol
+    - Trigger presets with customizable fade durations
+    - Activate/deactivate virtual console buttons
+    - Real-time WebSocket integration for live updates
+    - Support for HTP (Highest Takes Precedence) and LTP (Latest Takes Precedence) modes
+  version: 1.0.0
+  contact:
+    name: LuminetDMX Support
+    url: https://github.com/LuminetDMX
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: http://your-container-host:3000/api
+    description: Container deployment
+paths:
+  /presets:
+    get:
+      tags:
+        - Presets
+      summary: Get all presets
+      description: Returns a list of all available lighting presets
+      responses:
+        '200':
+          description: List of presets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Preset'
+    post:
+      tags:
+        - Presets
+      summary: Create a new preset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresetRequest'
+      responses:
+        '200':
+          description: Preset created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preset'
+  
+  /presets/{presetId}/apply:
+    post:
+      tags:
+        - Presets
+      summary: Apply a preset
+      description: Activates a preset with optional fade duration override
+      parameters:
+        - name: presetId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the preset to apply
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Override the preset's default fade duration (milliseconds)
+              example:
+                fadeMs: 2000
+      responses:
+        '200':
+          description: Preset applied successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  channelsUpdated:
+                    type: integer
+                  fadeMs:
+                    type: integer
+        '404':
+          description: Preset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /presets/{presetId}/clear:
+    post:
+      tags:
+        - Presets
+      summary: Clear a preset
+      description: Fades all channels in the preset to zero
+      parameters:
+        - name: presetId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the preset to clear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Override the preset's default fade duration (milliseconds)
+              example:
+                fadeMs: 1500
+      responses:
+        '200':
+          description: Preset cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  channelsUpdated:
+                    type: integer
+                  fadeMs:
+                    type: integer
+        '404':
+          description: Preset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /virtual-console/button/trigger:
+    post:
+      tags:
+        - Virtual Console
+      summary: Trigger virtual console button
+      description: |
+        Sends a trigger signal to a virtual console button via WebSocket.
+        The actual button state management is handled by the frontend virtual console.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - buttonId
+                - action
+              properties:
+                buttonId:
+                  type: string
+                  description: The ID of the virtual console button
+                action:
+                  type: string
+                  enum: [activate, deactivate, toggle]
+                  description: |
+                    - activate: Turn button on (if not already on)
+                    - deactivate: Turn button off (if not already off)  
+                    - toggle: Switch button state (on→off or off→on)
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Override the button's default fade duration (milliseconds)
+              example:
+                buttonId: "button-456"
+                action: "activate"
+                fadeMs: 1500
+      responses:
+        '200':
+          description: Button trigger signal sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  buttonId:
+                    type: string
+                  action:
+                    type: string
+                  fadeMs:
+                    type: integer
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /virtual-console/layout:
+    get:
+      tags:
+        - Virtual Console
+      summary: Get virtual console layout info
+      description: |
+        Returns information about virtual console layout management.
+        Note: The actual layout is stored in frontend localStorage.
+      responses:
+        '200':
+          description: Layout information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  note:
+                    type: string
+                  availableActions:
+                    type: array
+                    items:
+                      type: string
+  
+  /dmx/set-channel:
+    post:
+      tags:
+        - DMX Control
+      summary: Set single DMX channel
+      description: Sets a single DMX channel to the specified value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channel
+                - value
+              properties:
+                channel:
+                  type: integer
+                  minimum: 1
+                  maximum: 512
+                  description: DMX channel number (1-512)
+                value:
+                  type: integer
+                  minimum: 0
+                  maximum: 255
+                  description: DMX value (0-255)
+              example:
+                channel: 1
+                value: 255
+      responses:
+        '200':
+          description: Channel set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: integer
+                  value:
+                    type: integer
+        '400':
+          description: Invalid channel or value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /dmx/set-multiple:
+    post:
+      tags:
+        - DMX Control
+      summary: Set multiple DMX channels
+      description: Sets multiple DMX channels with optional fade transition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channels
+              properties:
+                channels:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - channel
+                      - value
+                    properties:
+                      channel:
+                        type: integer
+                        minimum: 1
+                        maximum: 512
+                      value:
+                        type: integer
+                        minimum: 0
+                        maximum: 255
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Fade duration in milliseconds
+              example:
+                channels:
+                  - channel: 1
+                    value: 255
+                  - channel: 2
+                    value: 128
+                  - channel: 3
+                    value: 0
+                fadeMs: 2000
+      responses:
+        '200':
+          description: Channels updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  fadeMs:
+                    type: integer
+  
+  /dmx/values:
+    get:
+      tags:
+        - DMX Control
+      summary: Get current DMX values
+      description: Returns the current values for all 512 DMX channels
+      responses:
+        '200':
+          description: Current DMX channel values
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  minimum: 0
+                  maximum: 255
+                minItems: 512
+                maxItems: 512
+                description: Array of 512 DMX values (0-255)
+  
+  /dmx/blackout:
+    post:
+      tags:
+        - DMX Control
+      summary: Blackout all channels
+      description: Sets all 512 DMX channels to 0 with optional fade
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Fade duration for blackout (milliseconds)
+              example:
+                fadeMs: 3000
+      responses:
+        '200':
+          description: Blackout initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  fadeMs:
+                    type: integer
+  
+  /groups:
+    get:
+      tags:
+        - System
+      summary: Get all lighting groups
+      description: Returns all lighting groups for reference
+      responses:
+        '200':
+          description: List of lighting groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+  
+  /patches:
+    get:
+      tags:
+        - System
+      summary: Get all fixture patches
+      description: Returns all fixture patches for understanding channel assignments
+      responses:
+        '200':
+          description: List of fixture patches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Patch'
+  
+  /fixture-templates:
+    get:
+      tags:
+        - System
+      summary: Get all fixture templates
+      description: Returns all fixture definitions for understanding channel layouts
+      responses:
+        '200':
+          description: List of fixture templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FixtureTemplate'
+
+components:
+  schemas:
+    Preset:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique preset identifier
+        name:
+          type: string
+          description: Human-readable preset name
+        description:
+          type: string
+          description: Optional preset description
+        fadeMs:
+          type: integer
+          minimum: 0
+          description: Default fade duration in milliseconds
+        channelValues:
+          type: array
+          items:
+            type: object
+            properties:
+              channel:
+                type: integer
+                minimum: 1
+                maximum: 512
+              value:
+                type: integer
+                minimum: 0
+                maximum: 255
+              patchId:
+                type: string
+              patchName:
+                type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        id: "preset-123"
+        name: "Stage Wash"
+        description: "Basic stage wash lighting"
+        fadeMs: 1000
+        channelValues:
+          - channel: 1
+            value: 255
+            patchId: "patch-1"
+            patchName: "Front Wash"
+          - channel: 2
+            value: 200
+            patchId: "patch-2"
+            patchName: "Side Light"
+        createdAt: "2024-01-15T10:30:00.000Z"
+    
+    CreatePresetRequest:
+      type: object
+      required:
+        - name
+        - channelValues
+      properties:
+        name:
+          type: string
+          description: Preset name
+        description:
+          type: string
+          description: Optional preset description
+        fadeMs:
+          type: integer
+          minimum: 0
+          description: Default fade duration in milliseconds
+        channelValues:
+          type: array
+          items:
+            type: object
+            required:
+              - channel
+              - value
+            properties:
+              channel:
+                type: integer
+                minimum: 1
+                maximum: 512
+              value:
+                type: integer
+                minimum: 0
+                maximum: 255
+              patchId:
+                type: string
+              patchName:
+                type: string
+    
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        patchIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+    
+    Patch:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        templateId:
+          type: string
+        universe:
+          type: integer
+        startAddress:
+          type: integer
+          minimum: 1
+          maximum: 512
+        createdAt:
+          type: string
+          format: date-time
+    
+    FixtureTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        manufacturer:
+          type: string
+        model:
+          type: string
+        channelCount:
+          type: integer
+          minimum: 1
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              function:
+                type: string
+              range:
+                type: string
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong
+      example:
+        error: "Address conflict: Channels 1-8 are already in use"
+
+  securitySchemes: {}
+
+tags:
+  - name: Presets
+    description: Lighting preset management and control
+  - name: Virtual Console
+    description: Virtual console button and fader control
+  - name: DMX Control
+    description: Direct DMX channel manipulation
+  - name: System
+    description: System information and configuration
+
+x-webhooks:
+  dmx_update:
+    post:
+      summary: DMX Values Update (WebSocket)
+      description: |
+        Real-time WebSocket message sent when DMX values change.
+        Connect to: `ws://localhost:3000/ws`
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [dmx_update]
+                data:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 255
+                  minItems: 512
+                  maxItems: 512
+              example:
+                type: "dmx_update"
+                data: [0, 255, 128, 0, 0, "..."]
+      responses:
+        '200':
+          description: WebSocket message format
+  
+  virtual_console_button_trigger:
+    post:
+      summary: Virtual Console Button Trigger (WebSocket)
+      description: |
+        WebSocket message sent when external application triggers a virtual console button.
+        Connect to: `ws://localhost:3000/ws`
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [virtual_console_button_trigger]
+                data:
+                  type: object
+                  properties:
+                    buttonId:
+                      type: string
+                    action:
+                      type: string
+                      enum: [activate, deactivate, toggle]
+                    fadeMs:
+                      type: integer
+                    timestamp:
+                      type: integer
+              example:
+                type: "virtual_console_button_trigger"
+                data:
+                  buttonId: "button-456"
+                  action: "activate"
+                  fadeMs: 1500
+                  timestamp: 1642234567890
+      responses:
+        '200':
+          description: WebSocket message format

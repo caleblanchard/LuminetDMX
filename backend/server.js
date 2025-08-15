@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const dgram = require('dgram');
 const { v4: uuidv4 } = require('uuid');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
 const FileDatabase = require('./database');
 
 const app = express();
@@ -14,6 +16,22 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 
 app.use(cors());
 app.use(express.json());
+
+// Load and serve Swagger documentation
+const swaggerDocument = YAML.load(path.join(__dirname, '../swagger.yaml'));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customSiteTitle: 'LuminetDMX API Documentation',
+  customfavIcon: '/favicon.ico',
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'list',
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true
+  }
+}));
 
 // Initialize database
 const dataDir = process.env.DATA_DIR || './data';
@@ -651,6 +669,58 @@ app.post('/api/dmx/blackout', (req, res) => {
 
   applyChannelValuesWithFade(targets, requestedFade);
   res.json({ message: 'Blackout initiated', fadeMs: requestedFade });
+});
+
+// Virtual Console API endpoints for external control
+app.post('/api/virtual-console/button/trigger', (req, res) => {
+  const { buttonId, action, fadeMs } = req.body;
+  
+  if (!buttonId || !action) {
+    return res.status(400).json({ error: 'buttonId and action are required' });
+  }
+  
+  if (!['activate', 'deactivate', 'toggle'].includes(action)) {
+    return res.status(400).json({ error: 'action must be "activate", "deactivate", or "toggle"' });
+  }
+  
+  // This endpoint serves as a webhook for external applications
+  // The actual button state is managed by the frontend virtual console
+  // We broadcast the button trigger event via WebSocket for the frontend to handle
+  
+  const message = {
+    type: 'virtual_console_button_trigger',
+    data: {
+      buttonId,
+      action,
+      fadeMs: fadeMs || undefined,
+      timestamp: Date.now()
+    }
+  };
+  
+  // Broadcast to all connected WebSocket clients (including the virtual console)
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+  
+  res.json({ 
+    message: `Button ${action} signal sent`,
+    buttonId,
+    action,
+    fadeMs: fadeMs || undefined
+  });
+});
+
+// Get virtual console layout (read-only for external apps)
+app.get('/api/virtual-console/layout', (req, res) => {
+  // This is a placeholder - the layout is stored in frontend localStorage
+  // External apps can use this to understand available buttons/faders
+  res.json({ 
+    message: 'Virtual console layout is managed by the frontend',
+    note: 'Use the /api/presets endpoint to see available presets that can be triggered',
+    availableActions: ['activate', 'deactivate', 'toggle']
+  });
 });
 
 wss.on('connection', (ws) => {

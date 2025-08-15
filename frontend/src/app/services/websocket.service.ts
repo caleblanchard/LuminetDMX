@@ -9,10 +9,12 @@ export class WebsocketService {
   private messageSubject = new Subject<any>();
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   private dmxValuesSubject = new BehaviorSubject<number[]>(new Array(512).fill(0));
+  private virtualConsoleButtonSubject = new Subject<{buttonId: string, action: string, fadeMs?: number}>();
 
   public messages$ = this.messageSubject.asObservable();
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
   public dmxValues$ = this.dmxValuesSubject.asObservable();
+  public virtualConsoleButtonTrigger$ = this.virtualConsoleButtonSubject.asObservable();
 
   constructor() {
     this.connect();
@@ -39,6 +41,9 @@ export class WebsocketService {
       if (data.type === 'dmx_update') {
         this.dmxValuesSubject.next(data.data);
         this.logDebug('DMX values updated from WebSocket', data.data);
+      } else if (data.type === 'virtual_console_button_trigger') {
+        this.virtualConsoleButtonSubject.next(data.data);
+        this.logDebug('Virtual console button trigger received', data.data);
       }
     };
 

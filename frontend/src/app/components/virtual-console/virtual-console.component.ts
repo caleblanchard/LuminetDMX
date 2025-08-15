@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { DmxCalculationService, ActiveElement } from '../../services/dmx-calculation.service';
+import { WebsocketService } from '../../services/websocket.service';
 import { Preset } from '../../models/fixture.model';
 import { Subscription } from 'rxjs';
 
@@ -717,6 +718,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   resizeDirection = '';
   
   private dmxSubscription: Subscription | null = null;
+  private buttonTriggerSubscription: Subscription | null = null;
   private clearAllListener: ((event: Event) => void) | null = null;
   private isFading = false;
   dmxMode: 'HTP' | 'LTP' = 'HTP';
@@ -725,13 +727,15 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   constructor(
     private apiService: ApiService,
     private confirm: ConfirmService,
-    private dmxCalculation: DmxCalculationService
+    private dmxCalculation: DmxCalculationService,
+    private websocketService: WebsocketService
   ) {}
 
   ngOnInit(): void {
     this.loadPresets();
     this.loadLayout();
     this.setupDmxSubscription();
+    this.setupButtonTriggerSubscription();
     this.loadDmxMode();
     this.setupSettingsListener();
     this.setupBeforeUnloadHandler();
@@ -742,6 +746,9 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     this.removeEventListeners();
     if (this.dmxSubscription) {
       this.dmxSubscription.unsubscribe();
+    }
+    if (this.buttonTriggerSubscription) {
+      this.buttonTriggerSubscription.unsubscribe();
     }
     // Save current control states when leaving the page
     this.saveControlStates();
@@ -765,6 +772,14 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     });
   }
 
+  setupButtonTriggerSubscription(): void {
+    this.buttonTriggerSubscription = this.websocketService.virtualConsoleButtonTrigger$.subscribe(
+      trigger => {
+        this.handleExternalButtonTrigger(trigger);
+      }
+    );
+  }
+
   private sendDmxValues(dmxValues: Map<number, number>): void {
     // Don't send DMX values if we're in the middle of a fade operation
     if (this.isFading) {
@@ -779,6 +794,44 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     
     // Send all channels including zero values to properly turn off lights
     this.apiService.setMultipleDmxChannels(channels).subscribe();
+  }
+
+  private handleExternalButtonTrigger(trigger: {buttonId: string, action: string, fadeMs?: number}): void {
+    const button = this.layout.buttons.find(b => b.id === trigger.buttonId);
+    if (!button) {
+      console.warn(`External trigger for unknown button ID: ${trigger.buttonId}`);
+      return;
+    }
+
+    // Override button's fade duration if provided in the trigger
+    const originalFadeMs = button.fadeMs;
+    if (trigger.fadeMs !== undefined) {
+      button.fadeMs = trigger.fadeMs;
+    }
+
+    // Apply the requested action
+    switch (trigger.action) {
+      case 'activate':
+        if (!button.isActive) {
+          this.toggleButton(button);
+        }
+        break;
+      case 'deactivate':
+        if (button.isActive) {
+          this.toggleButton(button);
+        }
+        break;
+      case 'toggle':
+        this.toggleButton(button);
+        break;
+      default:
+        console.warn(`Unknown button action: ${trigger.action}`);
+    }
+
+    // Restore original fade duration
+    button.fadeMs = originalFadeMs;
+    
+    console.log(`External trigger executed: ${trigger.action} button "${button.name}"`);
   }
 
   loadDmxMode(): void {
