@@ -21,6 +21,10 @@ RUN ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime
 # Copy built frontend into backend public directory
 COPY --from=frontend-builder /frontend/dist/luminet-dmx/browser /app/public
 
+# Copy API documentation files
+COPY swagger.yaml /app/
+COPY API.md /app/
+
 EXPOSE 3000
 CMD ["node", "server.js"]
 

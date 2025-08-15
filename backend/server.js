@@ -18,7 +18,41 @@ app.use(cors());
 app.use(express.json());
 
 // Load and serve Swagger documentation
-const swaggerDocument = YAML.load(path.join(__dirname, '../swagger.yaml'));
+// Try different paths for swagger.yaml (development vs container)
+const swaggerPaths = [
+  path.join(__dirname, '../swagger.yaml'),  // Development
+  path.join(__dirname, 'swagger.yaml')      // Container
+];
+
+let swaggerDocument;
+let swaggerFound = false;
+
+for (const swaggerPath of swaggerPaths) {
+  try {
+    if (fs.existsSync(swaggerPath)) {
+      swaggerDocument = YAML.load(swaggerPath);
+      swaggerFound = true;
+      console.log('Loaded swagger.yaml from:', swaggerPath);
+      break;
+    }
+  } catch (error) {
+    console.warn(`Failed to load swagger from ${swaggerPath}:`, error.message);
+  }
+}
+
+if (!swaggerFound) {
+  console.warn('Could not find swagger.yaml, using fallback documentation');
+  // Fallback to basic API info if swagger file not found
+  swaggerDocument = {
+    openapi: '3.0.3',
+    info: {
+      title: 'LuminetDMX API',
+      version: '1.0.0',
+      description: 'API documentation not available. Please refer to API.md for documentation.'
+    },
+    paths: {}
+  };
+}
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customSiteTitle: 'LuminetDMX API Documentation',
   customfavIcon: '/favicon.ico',
