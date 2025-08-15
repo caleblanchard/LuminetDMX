@@ -294,7 +294,10 @@ interface VirtualConsoleLayout {
       background: rgba(15, 23, 42, 0.3);
       border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: 8px;
-      overflow: hidden;
+      overflow: auto;
+      min-height: 400px;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
     .console-area.edit-mode {
@@ -593,8 +596,16 @@ interface VirtualConsoleLayout {
     }
 
     @media (max-width: 768px) {
+      .container {
+        padding: 12px;
+      }
+      
       .console-area {
-        height: 400px;
+        height: calc(100vh - 180px);
+        min-height: 400px;
+        padding: 15px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
       
       .header-controls {
@@ -604,12 +615,74 @@ interface VirtualConsoleLayout {
       
       .header-controls .btn {
         width: 100%;
+        padding: 8px 12px;
+        font-size: 14px;
       }
       
       .page-header {
         flex-direction: column;
         align-items: stretch;
-        gap: 16px;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      
+      .header-title h1 {
+        font-size: 18px;
+      }
+      
+      .dmx-mode-indicator {
+        font-size: 12px;
+      }
+      
+      .virtual-button,
+      .virtual-fader {
+        min-width: 60px;
+        min-height: 40px;
+      }
+      
+      .button-content .element-name,
+      .fader-content .element-name {
+        font-size: 11px;
+      }
+      
+      .preset-count {
+        font-size: 10px;
+      }
+      
+      .modal {
+        max-width: 95%;
+        margin: 10px;
+      }
+      
+      .modal h3 {
+        font-size: 18px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .console-area {
+        height: calc(100vh - 160px);
+        min-height: 350px;
+        padding: 10px;
+      }
+      
+      .virtual-button {
+        min-width: 50px;
+        min-height: 35px;
+      }
+      
+      .virtual-fader {
+        min-width: 50px;
+        min-height: 120px;
+      }
+      
+      .button-content .element-name,
+      .fader-content .element-name {
+        font-size: 10px;
+      }
+      
+      .preset-count {
+        font-size: 9px;
       }
     }
   `]
