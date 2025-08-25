@@ -12,8 +12,17 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ConfirmModalComponent],
   template: `
-    <div class="app-container">
-      <nav class="sidebar">
+    <div class="app-container" (click)="closeMobileMenu()">
+      <header class="topbar">
+        <button class="hamburger" (click)="$event.stopPropagation(); toggleMobileMenu()" aria-label="Menu">☰</button>
+        <div class="topbar-title">LuminetDMX</div>
+        <div class="spacer"></div>
+        <div class="connection-pill" [class.connected]="isConnected" [class.disconnected]="!isConnected">
+          <span class="dot"></span>{{ isConnected ? 'Connected' : 'Disconnected' }}
+        </div>
+      </header>
+      <div class="overlay" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
+      <nav class="sidebar" [class.mobile-open]="mobileMenuOpen" (click)="$event.stopPropagation()">
         <div class="logo">
           <h1>LuminetDMX</h1>
         </div>
@@ -97,6 +106,10 @@ import { Subscription } from 'rxjs';
     .app-container {
       display: flex;
       min-height: 100vh;
+    }
+
+    .topbar {
+      display: none;
     }
 
     .sidebar {
@@ -287,63 +300,56 @@ import { Subscription } from 'rxjs';
     .floating-clear-all:hover + .clear-all-tooltip { display: block; }
 
     @media (max-width: 768px) {
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: fixed;
-        bottom: 0;
-        z-index: 1000;
-        flex-direction: row;
-        border-right: none;
-        border-top: 1px solid rgba(148, 163, 184, 0.1);
-      }
-
-      .logo {
-        display: none;
-      }
-
-      .nav-menu {
+      .topbar {
         display: flex;
-        flex: 1;
-        padding: 0;
-        justify-content: space-around;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        position: sticky;
+        top: 0;
+        z-index: 1001;
+        background: rgba(15,23,42,0.9);
+        border-bottom: 1px solid rgba(148,163,184,0.1);
+        backdrop-filter: blur(10px);
+      }
+      .hamburger {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+        color: #e2e8f0;
+        background: transparent;
+        border: 1px solid rgba(148,163,184,0.3);
+        border-radius: 6px;
+      }
+      .topbar-title { color: #3b82f6; font-weight: 700; }
+      .spacer { flex: 1; }
+      .connection-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 1000;
       }
 
-      .nav-menu li {
-        margin-bottom: 0;
-        flex: 1;
+      .sidebar {
+        width: 260px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        z-index: 1001;
       }
-
-      .nav-menu a {
-        flex-direction: column;
-        padding: 12px 8px;
-        text-align: center;
-        border-right: none;
-        border-top: 3px solid transparent;
-        font-size: 12px;
-      }
-
-      .nav-menu a.active {
-        border-right: none;
-        border-top-color: #3b82f6;
-      }
-
-      .nav-menu .icon {
-        margin-right: 0;
-        margin-bottom: 4px;
-        font-size: 16px;
-      }
-
-      .connection-status {
-        display: none;
-      }
+      .sidebar.mobile-open { transform: translateX(0); }
 
       .main-content {
-        padding-bottom: 80px;
+        padding-bottom: 0;
       }
       
       .floating-blackout {
-        bottom: 100px;
+        bottom: 24px;
         right: 16px;
         width: 48px;
         height: 48px;
@@ -351,7 +357,7 @@ import { Subscription } from 'rxjs';
       }
       
       .floating-clear-all {
-        bottom: 160px;
+        bottom: 84px;
         right: 16px;
         width: 48px;
         height: 48px;
@@ -360,14 +366,14 @@ import { Subscription } from 'rxjs';
       
       .blackout-tooltip {
         right: 18px;
-        bottom: 154px;
+        bottom: 78px;
         font-size: 11px;
         padding: 4px 8px;
       }
       
       .clear-all-tooltip {
         right: 18px;
-        bottom: 214px;
+        bottom: 138px;
         font-size: 11px;
         padding: 4px 8px;
       }
@@ -378,6 +384,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isConnected = false;
   isBlackedOut = false;
   private blackoutSubscription: Subscription | null = null;
+  mobileMenuOpen = false;
 
   constructor(
     private websocketService: WebsocketService, 
@@ -407,5 +414,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
   clearAll(): void {
     this.blackoutService.clearAll();
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  closeMobileMenu(): void {
+    if (this.mobileMenuOpen) this.mobileMenuOpen = false;
   }
 }

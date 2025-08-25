@@ -43,7 +43,7 @@ interface VirtualConsoleLayout {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container" (click)="menuOpen = false">
+    <div class="container">
       <div class="page-header">
         <div class="header-title">
           <h1 class="text-xl">Virtual Console</h1>
@@ -59,11 +59,6 @@ interface VirtualConsoleLayout {
           <button class="btn btn-primary" *ngIf="editMode" (click)="showAddModal = true">
             Add Element
           </button>
-        </div>
-        <button class="mobile-menu-toggle" (click)="$event.stopPropagation(); menuOpen = !menuOpen" aria-label="Menu">☰</button>
-        <div class="mobile-menu" *ngIf="menuOpen" (click)="$event.stopPropagation()">
-          <button class="menu-item" (click)="toggleEditMode(); menuOpen = false">{{ editMode ? 'Exit Edit' : 'Edit Layout' }}</button>
-          <button class="menu-item" *ngIf="editMode" (click)="showAddModal = true; menuOpen = false">Add Element</button>
         </div>
       </div>
 
@@ -293,48 +288,6 @@ interface VirtualConsoleLayout {
       align-items: center;
     }
 
-    .mobile-menu-toggle {
-      display: none;
-      background: transparent;
-      color: #e2e8f0;
-      border: 1px solid rgba(148,163,184,0.3);
-      border-radius: 6px;
-      font-size: 20px;
-      width: 40px;
-      height: 36px;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .mobile-menu {
-      position: absolute;
-      right: 0;
-      top: 60px;
-      background: rgba(15,23,42,0.95);
-      border: 1px solid rgba(148,163,184,0.2);
-      border-radius: 8px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      z-index: 20;
-    }
-
-    .menu-item {
-      background: transparent;
-      color: #e2e8f0;
-      border: 1px solid rgba(148,163,184,0.2);
-      border-radius: 6px;
-      padding: 8px 12px;
-      text-align: left;
-      cursor: pointer;
-    }
-    .menu-item:hover {
-      background: rgba(30,41,59,0.8);
-      border-color: rgba(148,163,184,0.35);
-    }
 
     .console-area {
       position: relative;
@@ -663,9 +616,16 @@ interface VirtualConsoleLayout {
         -webkit-overflow-scrolling: touch;
       }
       
-      .header-controls { display: none; }
-      .mobile-menu-toggle { display: inline-flex; }
-      .page-header { position: relative; }
+      .header-controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .header-controls .btn {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
       
       .page-header {
         flex-direction: column;
