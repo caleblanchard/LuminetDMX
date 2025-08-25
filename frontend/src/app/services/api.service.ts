@@ -155,6 +155,31 @@ export class ApiService {
     return this.http.post<{ message: string; fadeMs?: number }>(`${this.baseUrl}/dmx/blackout`, { fadeMs });
   }
 
+  // Virtual console persistence
+  getVirtualConsoleLayout(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/virtual-console/layout`).pipe(
+      tap(layout => this.logDebug('API: Loaded virtual console layout', layout))
+    );
+  }
+
+  saveVirtualConsoleLayout(layout: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/virtual-console/layout`, layout).pipe(
+      tap(() => this.logDebug('API: Saved virtual console layout'))
+    );
+  }
+
+  getVirtualConsoleStates(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/virtual-console/states`).pipe(
+      tap(states => this.logDebug('API: Loaded virtual console states', states))
+    );
+  }
+
+  saveVirtualConsoleStates(states: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/virtual-console/states`, states).pipe(
+      tap(() => this.logDebug('API: Saved virtual console states'))
+    );
+  }
+
   private logDebug(message: string, data?: any): void {
     const settings = JSON.parse(localStorage.getItem('luminetDmxSettings') || '{}');
     if (settings.enableLogging) {

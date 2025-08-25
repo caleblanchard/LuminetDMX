@@ -166,6 +166,67 @@ class FileDatabase {
       return false;
     }
   }
+
+  // Virtual console layout and states persistence
+  loadVirtualConsoleLayout() {
+    const filePath = this.getFilePath('virtual_console_layout');
+    try {
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf8');
+        const parsed = JSON.parse(data);
+        return parsed;
+      } else {
+        const defaultLayout = { buttons: [], faders: [] };
+        this.saveVirtualConsoleLayout(defaultLayout);
+        return defaultLayout;
+      }
+    } catch (error) {
+      console.error('Error loading virtual console layout:', error);
+      return { buttons: [], faders: [] };
+    }
+  }
+
+  saveVirtualConsoleLayout(layout) {
+    const filePath = this.getFilePath('virtual_console_layout');
+    try {
+      const jsonData = JSON.stringify(layout, null, 2);
+      fs.writeFileSync(filePath, jsonData, 'utf8');
+      return true;
+    } catch (error) {
+      console.error('Error saving virtual console layout:', error);
+      return false;
+    }
+  }
+
+  loadVirtualConsoleStates() {
+    const filePath = this.getFilePath('virtual_console_states');
+    try {
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf8');
+        const parsed = JSON.parse(data);
+        return parsed;
+      } else {
+        const defaultStates = { buttons: {}, faders: {} };
+        this.saveVirtualConsoleStates(defaultStates);
+        return defaultStates;
+      }
+    } catch (error) {
+      console.error('Error loading virtual console states:', error);
+      return { buttons: {}, faders: {} };
+    }
+  }
+
+  saveVirtualConsoleStates(states) {
+    const filePath = this.getFilePath('virtual_console_states');
+    try {
+      const jsonData = JSON.stringify(states, null, 2);
+      fs.writeFileSync(filePath, jsonData, 'utf8');
+      return true;
+    } catch (error) {
+      console.error('Error saving virtual console states:', error);
+      return false;
+    }
+  }
 }
 
 module.exports = FileDatabase;

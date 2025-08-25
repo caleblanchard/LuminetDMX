@@ -77,20 +77,20 @@ interface VirtualConsoleLayout {
              [style.width.px]="button.width"
              [style.height.px]="button.height"
              (click)="editMode ? selectElement('button', button.id) : toggleButton(button)"
-             (mousedown)="editMode ? onElementMouseDown($event, 'button', button.id) : null">
+             (pointerdown)="editMode ? onElementPointerDown($event, 'button', button.id) : null">
           <div class="button-content">
             <div class="element-name">{{ button.name }}</div>
             <div class="preset-count">{{ button.presetIds.length }} preset(s)</div>
           </div>
           <div class="resize-handles" *ngIf="editMode && resizingElement?.type === 'button' && resizingElement?.id === button.id">
-            <div class="resize-handle nw" (mousedown)="startResize($event, 'nw')"></div>
-            <div class="resize-handle ne" (mousedown)="startResize($event, 'ne')"></div>
-            <div class="resize-handle sw" (mousedown)="startResize($event, 'sw')"></div>
-            <div class="resize-handle se" (mousedown)="startResize($event, 'se')"></div>
-            <div class="resize-handle n" (mousedown)="startResize($event, 'n')"></div>
-            <div class="resize-handle s" (mousedown)="startResize($event, 's')"></div>
-            <div class="resize-handle e" (mousedown)="startResize($event, 'e')"></div>
-            <div class="resize-handle w" (mousedown)="startResize($event, 'w')"></div>
+            <div class="resize-handle nw" (pointerdown)="startResize($event, 'nw')"></div>
+            <div class="resize-handle ne" (pointerdown)="startResize($event, 'ne')"></div>
+            <div class="resize-handle sw" (pointerdown)="startResize($event, 'sw')"></div>
+            <div class="resize-handle se" (pointerdown)="startResize($event, 'se')"></div>
+            <div class="resize-handle n" (pointerdown)="startResize($event, 'n')"></div>
+            <div class="resize-handle s" (pointerdown)="startResize($event, 's')"></div>
+            <div class="resize-handle e" (pointerdown)="startResize($event, 'e')"></div>
+            <div class="resize-handle w" (pointerdown)="startResize($event, 'w')"></div>
           </div>
           <div class="control-buttons" *ngIf="editMode">
             <button class="control-btn edit-btn" (click)="editElement('button', button.id); $event.stopPropagation()" title="Edit">✏️</button>
@@ -112,7 +112,7 @@ interface VirtualConsoleLayout {
              [style.width.px]="fader.width"
              [style.height.px]="fader.height"
              (click)="editMode ? selectElement('fader', fader.id) : null"
-             (mousedown)="editMode ? onElementMouseDown($event, 'fader', fader.id) : null">
+             (pointerdown)="editMode ? onElementPointerDown($event, 'fader', fader.id) : null">
           <div class="fader-content">
             <div class="element-name">{{ fader.name }}</div>
             <input type="range" 
@@ -127,14 +127,14 @@ interface VirtualConsoleLayout {
             <div class="preset-count">{{ fader.presetIds.length }} preset(s)</div>
           </div>
           <div class="resize-handles" *ngIf="editMode && resizingElement?.type === 'fader' && resizingElement?.id === fader.id">
-            <div class="resize-handle nw" (mousedown)="startResize($event, 'nw')"></div>
-            <div class="resize-handle ne" (mousedown)="startResize($event, 'ne')"></div>
-            <div class="resize-handle sw" (mousedown)="startResize($event, 'sw')"></div>
-            <div class="resize-handle se" (mousedown)="startResize($event, 'se')"></div>
-            <div class="resize-handle n" (mousedown)="startResize($event, 'n')"></div>
-            <div class="resize-handle s" (mousedown)="startResize($event, 's')"></div>
-            <div class="resize-handle e" (mousedown)="startResize($event, 'e')"></div>
-            <div class="resize-handle w" (mousedown)="startResize($event, 'w')"></div>
+            <div class="resize-handle nw" (pointerdown)="startResize($event, 'nw')"></div>
+            <div class="resize-handle ne" (pointerdown)="startResize($event, 'ne')"></div>
+            <div class="resize-handle sw" (pointerdown)="startResize($event, 'sw')"></div>
+            <div class="resize-handle se" (pointerdown)="startResize($event, 'se')"></div>
+            <div class="resize-handle n" (pointerdown)="startResize($event, 'n')"></div>
+            <div class="resize-handle s" (pointerdown)="startResize($event, 's')"></div>
+            <div class="resize-handle e" (pointerdown)="startResize($event, 'e')"></div>
+            <div class="resize-handle w" (pointerdown)="startResize($event, 'w')"></div>
           </div>
           <div class="control-buttons" *ngIf="editMode">
             <button class="control-btn edit-btn" (click)="editElement('fader', fader.id); $event.stopPropagation()" title="Edit">✏️</button>
@@ -332,6 +332,8 @@ interface VirtualConsoleLayout {
 
     .virtual-button.editable {
       border-style: dashed;
+      touch-action: none;
+      -ms-touch-action: none;
     }
 
     .virtual-button.selected {
@@ -354,6 +356,8 @@ interface VirtualConsoleLayout {
 
     .virtual-fader.editable {
       border-style: dashed;
+      touch-action: none;
+      -ms-touch-action: none;
     }
 
     .virtual-fader.selected {
@@ -723,6 +727,10 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   private isFading = false;
   dmxMode: 'HTP' | 'LTP' = 'HTP';
   resizingElement: { type: 'button' | 'fader', id: string } | null = null;
+  
+  // Stable listener references for add/remove
+  private handlePointerMove = (event: PointerEvent) => this.onPointerMove(event);
+  private handlePointerUp = () => this.onPointerUp();
 
   constructor(
     private apiService: ApiService,
@@ -885,19 +893,65 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   loadLayout(): void {
-    const saved = localStorage.getItem('virtualConsoleLayout');
-    if (saved) {
-      this.layout = JSON.parse(saved);
-    }
-    this.loadControlStates();
+    // Try backend first
+    this.apiService.getVirtualConsoleLayout().subscribe({
+      next: (layout) => {
+        if (layout && Array.isArray(layout.buttons) && Array.isArray(layout.faders)) {
+          this.layout = layout;
+          localStorage.setItem('virtualConsoleLayout', JSON.stringify(layout));
+        }
+        this.loadControlStates();
+      },
+      error: () => {
+        // Fallback to local storage
+        const saved = localStorage.getItem('virtualConsoleLayout');
+        if (saved) {
+          this.layout = JSON.parse(saved);
+        }
+        this.loadControlStates();
+      }
+    });
   }
 
   loadControlStates(): void {
+    // Try backend first
+    this.apiService.getVirtualConsoleStates().subscribe({
+      next: (states) => {
+        if (states) {
+          localStorage.setItem('virtualConsoleStates', JSON.stringify(states));
+          // Restore button states
+          if (states.buttons) {
+            this.layout.buttons.forEach(button => {
+              const savedState = states.buttons[button.id];
+              if (savedState !== undefined) {
+                button.isActive = savedState.isActive;
+                button.activatedAt = savedState.activatedAt;
+              }
+            });
+          }
+          // Restore fader values
+          if (states.faders) {
+            this.layout.faders.forEach(fader => {
+              const savedState = states.faders[fader.id];
+              if (savedState !== undefined) {
+                fader.value = savedState.value;
+                fader.activatedAt = savedState.activatedAt;
+              }
+            });
+          }
+          this.updateDmxCalculation();
+          return;
+        }
+      },
+      error: () => {
+        // ignore and fallback
+      }
+    });
+
+    // Fallback to local storage if backend load fails or returns nothing
     const savedStates = localStorage.getItem('virtualConsoleStates');
     if (savedStates) {
       const states = JSON.parse(savedStates);
-      
-      // Restore button states
       if (states.buttons) {
         this.layout.buttons.forEach(button => {
           const savedState = states.buttons[button.id];
@@ -907,8 +961,6 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
           }
         });
       }
-      
-      // Restore fader values
       if (states.faders) {
         this.layout.faders.forEach(fader => {
           const savedState = states.faders[fader.id];
@@ -918,8 +970,6 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
           }
         });
       }
-      
-      // Restore DMX values after loading states
       this.updateDmxCalculation();
     }
   }
@@ -947,11 +997,21 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     });
     
     localStorage.setItem('virtualConsoleStates', JSON.stringify(states));
+    // Also persist to backend (fire-and-forget)
+    this.apiService.saveVirtualConsoleStates(states).subscribe({
+      next: () => {},
+      error: () => {}
+    });
   }
 
   saveLayout(): void {
     localStorage.setItem('virtualConsoleLayout', JSON.stringify(this.layout));
     this.saveControlStates();
+    // Also persist to backend (fire-and-forget)
+    this.apiService.saveVirtualConsoleLayout(this.layout).subscribe({
+      next: () => {},
+      error: () => {}
+    });
   }
 
   toggleEditMode(): void {
@@ -1012,7 +1072,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     }
   }
 
-  onElementMouseDown(event: MouseEvent, type: 'button' | 'fader', id: string): void {
+  onElementPointerDown(event: PointerEvent, type: 'button' | 'fader', id: string): void {
     if (!this.editMode) return;
     
     // Don't allow dragging if this element is in resize mode
@@ -1037,7 +1097,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     this.addEventListeners();
   }
 
-  startResize(event: MouseEvent, direction: string): void {
+  startResize(event: PointerEvent, direction: string): void {
     event.preventDefault();
     event.stopPropagation();
     
@@ -1061,13 +1121,13 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   }
 
   private addEventListeners(): void {
-    document.addEventListener('mousemove', this.onMouseMove.bind(this));
-    document.addEventListener('mouseup', this.onMouseUp.bind(this));
+    document.addEventListener('pointermove', this.handlePointerMove, { passive: false });
+    document.addEventListener('pointerup', this.handlePointerUp, { passive: true });
   }
 
   private removeEventListeners(): void {
-    document.removeEventListener('mousemove', this.onMouseMove.bind(this));
-    document.removeEventListener('mouseup', this.onMouseUp.bind(this));
+    document.removeEventListener('pointermove', this.handlePointerMove as EventListener);
+    document.removeEventListener('pointerup', this.handlePointerUp as EventListener);
     
     // Remove clear all listener
     if (this.clearAllListener) {
@@ -1076,7 +1136,9 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     }
   }
 
-  private onMouseMove(event: MouseEvent): void {
+  private onPointerMove(event: PointerEvent): void {
+    // prevent page scrolling during touch drag/resize
+    event.preventDefault();
     const deltaX = event.clientX - this.dragStartPos.x;
     const deltaY = event.clientY - this.dragStartPos.y;
     
@@ -1155,7 +1217,7 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     }
   }
 
-  private onMouseUp(): void {
+  private onPointerUp(): void {
     this.isDragging = false;
     this.isResizing = false;
     this.removeEventListeners();

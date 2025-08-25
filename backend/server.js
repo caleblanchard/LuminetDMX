@@ -78,6 +78,8 @@ let patches = db.find('patches');
 let groups = db.find('groups');
 let presets = db.find('presets');
 let dmxValues = db.loadDmxValues();
+let virtualConsoleLayout = db.loadVirtualConsoleLayout();
+let virtualConsoleStates = db.loadVirtualConsoleStates();
 
 console.log('Database initialized:', {
   templates: fixtureTemplates.length,
@@ -746,15 +748,33 @@ app.post('/api/virtual-console/button/trigger', (req, res) => {
   });
 });
 
-// Get virtual console layout (read-only for external apps)
+// Virtual console persistence endpoints
 app.get('/api/virtual-console/layout', (req, res) => {
-  // This is a placeholder - the layout is stored in frontend localStorage
-  // External apps can use this to understand available buttons/faders
-  res.json({ 
-    message: 'Virtual console layout is managed by the frontend',
-    note: 'Use the /api/presets endpoint to see available presets that can be triggered',
-    availableActions: ['activate', 'deactivate', 'toggle']
-  });
+  return res.json(virtualConsoleLayout);
+});
+
+app.post('/api/virtual-console/layout', (req, res) => {
+  const layout = req.body;
+  if (!layout || typeof layout !== 'object' || !Array.isArray(layout.buttons) || !Array.isArray(layout.faders)) {
+    return res.status(400).json({ error: 'Invalid layout format' });
+  }
+  virtualConsoleLayout = layout;
+  db.saveVirtualConsoleLayout(virtualConsoleLayout);
+  return res.json({ message: 'Layout saved' });
+});
+
+app.get('/api/virtual-console/states', (req, res) => {
+  return res.json(virtualConsoleStates);
+});
+
+app.post('/api/virtual-console/states', (req, res) => {
+  const states = req.body;
+  if (!states || typeof states !== 'object' || !states.buttons || !states.faders) {
+    return res.status(400).json({ error: 'Invalid states format' });
+  }
+  virtualConsoleStates = states;
+  db.saveVirtualConsoleStates(virtualConsoleStates);
+  return res.json({ message: 'States saved' });
 });
 
 wss.on('connection', (ws) => {
