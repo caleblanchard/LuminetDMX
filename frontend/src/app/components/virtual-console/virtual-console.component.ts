@@ -460,6 +460,8 @@ interface VirtualConsoleLayout {
       border-radius: 2px;
       pointer-events: all;
       cursor: pointer;
+      touch-action: none;
+      -ms-touch-action: none;
     }
 
     .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
@@ -1105,6 +1107,10 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
     this.resizeDirection = direction;
     
     this.dragStartPos = { x: event.clientX, y: event.clientY };
+    // Capture pointer to ensure we continue receiving events during touch drag
+    try {
+      (event.target as Element)?.ownerDocument?.documentElement?.setPointerCapture?.(event.pointerId);
+    } catch {}
     
     if (this.resizingElement) {
       const element = this.resizingElement.type === 'button' 
@@ -1123,11 +1129,13 @@ export class VirtualConsoleComponent implements OnInit, OnDestroy {
   private addEventListeners(): void {
     document.addEventListener('pointermove', this.handlePointerMove, { passive: false });
     document.addEventListener('pointerup', this.handlePointerUp, { passive: true });
+    document.addEventListener('pointercancel', this.handlePointerUp as EventListener, { passive: true });
   }
 
   private removeEventListeners(): void {
     document.removeEventListener('pointermove', this.handlePointerMove as EventListener);
     document.removeEventListener('pointerup', this.handlePointerUp as EventListener);
+    document.removeEventListener('pointercancel', this.handlePointerUp as EventListener);
     
     // Remove clear all listener
     if (this.clearAllListener) {
