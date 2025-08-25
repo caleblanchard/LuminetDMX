@@ -29,49 +29,49 @@ import { Subscription } from 'rxjs';
         
         <ul class="nav-menu">
           <li>
-            <a routerLink="/virtual-console" routerLinkActive="active">
+            <a routerLink="/virtual-console" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">🎛️</span>
               Virtual Console
             </a>
           </li>
           <li>
-            <a routerLink="/light-control" routerLinkActive="active">
+            <a routerLink="/light-control" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">🎨</span>
               Light Control
             </a>
           </li>
           <li>
-            <a routerLink="/presets" routerLinkActive="active">
+            <a routerLink="/presets" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">📋</span>
               Presets
             </a>
           </li>
           <li>
-            <a routerLink="/console" routerLinkActive="active">
+            <a routerLink="/console" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">🎚️</span>
               Console
             </a>
           </li>
           <li>
-            <a routerLink="/fixtures" routerLinkActive="active">
+            <a routerLink="/fixtures" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">💡</span>
               Fixtures
             </a>
           </li>
           <li>
-            <a routerLink="/patches" routerLinkActive="active">
+            <a routerLink="/patches" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">🔌</span>
               Patches
             </a>
           </li>
           <li>
-            <a routerLink="/groups" routerLinkActive="active">
+            <a routerLink="/groups" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">👥</span>
               Groups
             </a>
           </li>
           <li>
-            <a routerLink="/settings" routerLinkActive="active">
+            <a routerLink="/settings" routerLinkActive="active" (click)="closeMobileMenu()">
               <span class="icon">⚙️</span>
               Settings
             </a>
@@ -300,6 +300,9 @@ import { Subscription } from 'rxjs';
     .floating-clear-all:hover + .clear-all-tooltip { display: block; }
 
     @media (max-width: 768px) {
+      .app-container { flex-direction: column; }
+      .topbar { width: 100%; }
+      .main-content { width: 100%; }
       .topbar {
         display: flex;
         align-items: center;
