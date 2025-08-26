@@ -74,8 +74,8 @@ export class BlackoutService {
         this.savedDmxValues = [];
       }
       
-      // Send blackout command to clear all channels
-      await firstValueFrom(this.apiService.blackout(0));
+      // Send clear-all command to backend
+      await firstValueFrom(this.apiService.clearAll(0));
       
       // Broadcast clear all event for virtual console to listen to
       window.dispatchEvent(new CustomEvent('clearAllChannels'));

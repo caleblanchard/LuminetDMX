@@ -390,6 +390,38 @@ paths:
                     type: string
                   fadeMs:
                     type: integer
+
+  /dmx/clear-all:
+    post:
+      tags:
+        - DMX Control
+      summary: Clear all DMX channels (alias of blackout)
+      description: Sets all 512 DMX channels to 0 with optional fade. Functionally identical to blackout.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fadeMs:
+                  type: integer
+                  minimum: 0
+                  maximum: 60000
+                  description: Fade duration for clear all (milliseconds)
+            example:
+              fadeMs: 3000
+      responses:
+        '200':
+          description: Clear all initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  fadeMs:
+                    type: integer
   
   /groups:
     get:

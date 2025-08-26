@@ -155,6 +155,10 @@ export class ApiService {
     return this.http.post<{ message: string; fadeMs?: number }>(`${this.baseUrl}/dmx/blackout`, { fadeMs });
   }
 
+  clearAll(fadeMs?: number): Observable<{ message: string; fadeMs?: number }> {
+    return this.http.post<{ message: string; fadeMs?: number }>(`${this.baseUrl}/dmx/clear-all`, { fadeMs });
+  }
+
   // Virtual console persistence
   getVirtualConsoleLayout(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/virtual-console/layout`).pipe(

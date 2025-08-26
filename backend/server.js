@@ -707,6 +707,17 @@ app.post('/api/dmx/blackout', (req, res) => {
   res.json({ message: 'Blackout initiated', fadeMs: requestedFade });
 });
 
+// Clear all DMX channels (alias of blackout) with optional fade
+app.post('/api/dmx/clear-all', (req, res) => {
+  const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : 0;
+  const targets = dmxValues
+    .map((value, idx) => ({ channel: idx + 1, value: 0 }))
+    .filter(({ channel }) => channel >= 1 && channel <= 512);
+
+  applyChannelValuesWithFade(targets, requestedFade);
+  res.json({ message: 'Clear all initiated', fadeMs: requestedFade });
+});
+
 // Virtual Console API endpoints for external control
 app.post('/api/virtual-console/button/trigger', (req, res) => {
   const { buttonId, action, fadeMs } = req.body;

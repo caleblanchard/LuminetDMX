@@ -36,6 +36,13 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
       <div class="form-container" *ngIf="showAddForm || editingPreset">
         <div class="card">
           <h2 class="text-lg mb-4">{{ editingPreset ? 'Edit' : 'Create' }} Preset</h2>
+          <div class="preset-meta" *ngIf="editingPreset">
+            <label class="label small">Preset ID</label>
+            <div class="id-row">
+              <input class="input id-input" [value]="editingPreset.id" readonly>
+              <button type="button" class="btn btn-secondary copy-btn" (click)="copyPresetId()">Copy</button>
+            </div>
+          </div>
           
           <form (ngSubmit)="savePreset()" #presetForm="ngForm">
             <div class="grid grid-cols-1 gap-4 mb-4">
@@ -236,6 +243,27 @@ import { Preset, PresetChannelValue, Patch, FixtureTemplate } from '../../models
 
     .form-container {
       max-width: 800px;
+    }
+
+    .preset-meta {
+      margin-bottom: 12px;
+    }
+
+    .preset-meta .label.small {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      display: inline-block;
+    }
+
+    .id-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .id-input {
+      font-family: 'Courier New', monospace;
     }
 
     .channels-section {
@@ -576,5 +604,19 @@ export class PresetsComponent implements OnInit {
     this.showAddForm = false;
     this.editingPreset = null;
     this.currentPreset = this.getEmptyPreset();
+  }
+
+  copyPresetId(): void {
+    if (!this.editingPreset) return;
+    const id = this.editingPreset.id;
+    navigator.clipboard?.writeText(id).catch(() => {
+      // Fallback: create a temporary input
+      const temp = document.createElement('input');
+      temp.value = id;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+    });
   }
 }
