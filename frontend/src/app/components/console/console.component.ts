@@ -124,21 +124,7 @@ interface FaderChannel {
         </div>
       </div>
 
-      <!-- DMX Monitor -->
-      <div class="dmx-monitor">
-        <h3 class="text-lg mb-4">DMX Monitor</h3>
-        <div class="monitor-grid">
-          <div class="monitor-channel" 
-               *ngFor="let value of dmxValues.slice(0, 64); let i = index"
-               [class.active]="value > 0">
-            <div class="channel-num">{{ i + 1 }}</div>
-            <div class="channel-val">{{ value }}</div>
-          </div>
-        </div>
-        <div class="monitor-info" *ngIf="hasActiveChannels()">
-          Showing channels 1-64. Active channels: {{ getActiveChannelCount() }}
-        </div>
-      </div>
+      
 
       <!-- Save Preset Modal -->
       <div class="modal-overlay" *ngIf="showPresetModal" (click)="cancelPresetModal()">

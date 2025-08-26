@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ConfirmModalComponent } from './components/confirm-modal/confirm-modal.component';
+import { DmxMonitorComponent } from './components/dmx-monitor/dmx-monitor.component';
 import { WebsocketService } from './services/websocket.service';
 import { ApiService } from './services/api.service';
 import { BlackoutService } from './services/blackout.service';
@@ -10,7 +11,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ConfirmModalComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ConfirmModalComponent, DmxMonitorComponent],
   template: `
     <div class="app-container" (click)="closeMobileMenu()">
       <header class="topbar">
@@ -86,7 +87,7 @@ import { Subscription } from 'rxjs';
         </div>
       </nav>
       
-      <main class="main-content">
+      <main class="main-content" [class.panel-open]="isMonitorOpen">
         <router-outlet></router-outlet>
         <button class="floating-blackout" 
                 [class.active]="isBlackedOut"
@@ -99,6 +100,23 @@ import { Subscription } from 'rxjs';
         <button class="floating-clear-all" (click)="clearAll()" title="Clear All Channels">🧹</button>
         <div class="clear-all-tooltip">Clear All</div>
         <app-confirm-modal></app-confirm-modal>
+
+        <!-- Collapsible DMX Monitor Handle (collapsed state) -->
+        <button class="monitor-handle" *ngIf="!isMonitorOpen" (click)="$event.stopPropagation(); toggleMonitor()" title="Open DMX Monitor">
+          ⬆ DMX Monitor
+        </button>
+
+        <!-- Bottom Collapsible DMX Monitor Panel -->
+        <div class="monitor-panel" *ngIf="isMonitorOpen" (click)="$event.stopPropagation()">
+          <div class="monitor-header">
+            <div class="title">DMX Monitor</div>
+            <div class="spacer"></div>
+            <button class="collapse-btn" (click)="toggleMonitor()" title="Collapse">✖</button>
+          </div>
+          <div class="monitor-content">
+            <app-dmx-monitor [channelCount]="64"></app-dmx-monitor>
+          </div>
+        </div>
       </main>
     </div>
   `,
@@ -209,6 +227,62 @@ import { Subscription } from 'rxjs';
       flex: 1;
       overflow-x: hidden;
       position: relative;
+    }
+
+    /* Collapsible monitor */
+    .monitor-handle {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      padding: 8px 12px;
+      border: 1px solid rgba(148,163,184,0.2);
+      background: rgba(15,23,42,0.95);
+      color: #e2e8f0;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      z-index: 1200;
+      cursor: pointer;
+    }
+
+    .monitor-panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.97);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 -10px 24px rgba(0,0,0,0.4);
+      z-index: 1200;
+      padding: 12px 16px 16px 16px;
+    }
+
+    .monitor-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .monitor-header .title {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    .monitor-header .spacer { flex: 1; }
+
+    .collapse-btn {
+      background: transparent;
+      border: 1px solid rgba(148,163,184,0.3);
+      color: #cbd5e1;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .monitor-content {
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     .floating-blackout {
@@ -350,6 +424,11 @@ import { Subscription } from 'rxjs';
       .main-content {
         padding-bottom: 0;
       }
+      .monitor-panel {
+        padding: 10px 10px 12px 10px;
+      }
+      .monitor-content { max-width: 100%; }
+      .monitor-handle { bottom: 0; }
       
       .floating-blackout {
         bottom: 24px;
@@ -381,6 +460,11 @@ import { Subscription } from 'rxjs';
         padding: 4px 8px;
       }
     }
+
+    /* When panel is open, move floating buttons up so they don't overlap */
+    .panel-open ~ .floating-blackout {}
+    .main-content.panel-open .floating-blackout { bottom: 260px; }
+    .main-content.panel-open .floating-clear-all { bottom: 320px; }
   `]
 })
 export class AppComponent implements OnInit, OnDestroy {
@@ -388,6 +472,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isBlackedOut = false;
   private blackoutSubscription: Subscription | null = null;
   mobileMenuOpen = false;
+  isMonitorOpen = false;
 
   constructor(
     private websocketService: WebsocketService, 
@@ -417,6 +502,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   clearAll(): void {
     this.blackoutService.clearAll();
+  }
+
+  toggleMonitor(): void {
+    this.isMonitorOpen = !this.isMonitorOpen;
   }
 
   toggleMobileMenu(): void {
