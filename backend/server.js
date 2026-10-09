@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const WebSocket = require('ws');
 const http = require('http');
 const path = require('path');
@@ -14,11 +15,67 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
-app.use(cors());
+// CORS configuration - restrict to known origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:4200', 'http://localhost:80'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('Origin not allowed by CORS'));
+    }
+    return callback(null, origin);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: rateLimit.ipKeyGenerator,
+  handler: (req, res) => {
+    res.status(429).json({ error: 'Too many requests, please try again later.' });
+  }
+});
+
+// Apply rate limiting to all requests
+app.use(limiter);
+
+// Strict rate limiting for DMX control endpoints
+const dmxLimiter = rateLimit({
+  windowMs: 10 * 1000, // 10 seconds
+  max: 20, // limit each IP to 20 requests per 10 seconds
+  message: { error: 'DMX control rate limit exceeded.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: rateLimit.ipKeyGenerator,
+  handler: (req, res) => {
+    res.status(429).json({ error: 'DMX control rate limit exceeded. Try again later.' });
+  }
+});
+
+// Apply strict rate limiting to DMX endpoints
+app.use('/api/dmx', dmxLimiter);
+app.use('/api/virtual-console', dmxLimiter);
+
 app.use(express.json());
 
+// Limit JSON payload size to prevent memory exhaustion
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
 // Load and serve Swagger documentation
-// Try different paths for swagger.yaml (development vs container)
 const swaggerPaths = [
   path.join(__dirname, '../swagger.yaml'),  // Development
   path.join(__dirname, 'swagger.yaml')      // Container
@@ -42,7 +99,6 @@ for (const swaggerPath of swaggerPaths) {
 
 if (!swaggerFound) {
   console.warn('Could not find swagger.yaml, using fallback documentation');
-  // Fallback to basic API info if swagger file not found
   swaggerDocument = {
     openapi: '3.0.3',
     info: {
@@ -53,6 +109,7 @@ if (!swaggerFound) {
     paths: {}
   };
 }
+
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customSiteTitle: 'LuminetDMX API Documentation',
   customfavIcon: '/favicon.ico',
@@ -92,22 +149,10 @@ console.log('Database initialized:', {
 // Helper functions for address management
 function getUsedAddresses(universe) {
   const usedRanges = [];
-  // Ensure universe is treated as a number for comparison
   const targetUniverse = typeof universe === 'string' ? parseInt(universe) : universe;
   const relevantPatches = patches.filter(p => {
     const patchUniverse = typeof p.universe === 'string' ? parseInt(p.universe) : p.universe;
     return patchUniverse === targetUniverse;
-  });
-  
-  console.log(`Getting used addresses for universe ${universe} (parsed: ${targetUniverse}):`, {
-    totalPatches: patches.length,
-    relevantPatches: relevantPatches.length,
-    relevantPatchData: relevantPatches.map(p => ({ 
-      name: p.name, 
-      universe: p.universe, 
-      universeType: typeof p.universe,
-      startAddress: p.startAddress 
-    }))
   });
   
   relevantPatches.forEach(patch => {
@@ -121,7 +166,6 @@ function getUsedAddresses(universe) {
     }
   });
   
-  console.log(`Used address ranges for universe ${universe}:`, usedRanges);
   return usedRanges;
 }
 
@@ -151,12 +195,8 @@ function findAvailableAddresses(universe, templateId, quantity, startAddress = 1
   const addresses = [];
   let currentAddress = startAddress;
   
-  console.log(`Finding addresses for ${quantity} fixtures starting at ${startAddress} in universe ${universe}`);
-  
   for (let i = 0; i < quantity; i++) {
-    // Check if current address has a conflict
     const hasConflict = hasAddressConflict(universe, currentAddress, template.channelCount);
-    console.log(`Checking address ${currentAddress}-${currentAddress + template.channelCount - 1}: conflict = ${hasConflict}`);
     
     if (hasConflict) {
       return { 
@@ -165,7 +205,6 @@ function findAvailableAddresses(universe, templateId, quantity, startAddress = 1
       };
     }
     
-    // Check if we would exceed the DMX limit
     if (currentAddress + template.channelCount - 1 > 512) {
       return {
         error: `Would exceed DMX channel limit (512). Cannot place fixture at address ${currentAddress}.`,
@@ -177,7 +216,6 @@ function findAvailableAddresses(universe, templateId, quantity, startAddress = 1
     currentAddress += template.channelCount;
   }
   
-  console.log(`Successfully found addresses: ${addresses}`);
   return { addresses };
 }
 
@@ -192,7 +230,6 @@ function initializeArtnet() {
   try {
     artnetSocket = dgram.createSocket('udp4');
     
-    // Bind to a random port first, then set broadcast
     artnetSocket.bind(() => {
       const isBroadcast = universeConfig.broadcastIP.endsWith('.255');
       if (isBroadcast) {
@@ -214,28 +251,14 @@ function initializeArtnet() {
 function createArtNetPacket(universe, dmxData) {
   const packet = Buffer.alloc(530);
   
-  // Art-Net header: "Art-Net\0"
   packet.write('Art-Net\0', 0, 8, 'ascii');
-  
-  // OpCode for ArtDMX: 0x5000 (little-endian)
   packet.writeUInt16LE(0x5000, 8);
-  
-  // Protocol version: 14 (0x000e)
   packet.writeUInt16BE(14, 10);
-  
-  // Sequence: 0 (no sequence)
   packet.writeUInt8(0, 12);
-  
-  // Physical input port: 0
   packet.writeUInt8(0, 13);
-  
-  // Universe (subnet + universe)
   packet.writeUInt16LE(universe, 14);
-  
-  // Data length: 512 (high byte first)
   packet.writeUInt16BE(512, 16);
   
-  // DMX data (512 channels)
   for (let i = 0; i < 512; i++) {
     packet.writeUInt8(dmxData[i] || 0, 18 + i);
   }
@@ -244,35 +267,16 @@ function createArtNetPacket(universe, dmxData) {
 }
 
 function broadcastDMX() {
-  console.log('Broadcasting DMX data:', {
-    universe: universeConfig.universe,
-    broadcastIP: universeConfig.broadcastIP,
-    nonZeroChannels: dmxValues.filter(v => v > 0).length
-  });
-  
   if (artnetSocket) {
     try {
       const packet = createArtNetPacket(universeConfig.universe, dmxValues);
       
-      // Log packet details for debugging
-      console.log('Art-Net packet details:', {
-        size: packet.length,
-        header: packet.toString('ascii', 0, 8),
-        opcode: '0x' + packet.readUInt16LE(8).toString(16),
-        universe: packet.readUInt16LE(14),
-        dataLength: packet.readUInt16BE(16)
-      });
-      
-      // Send to Art-Net port
       artnetSocket.send(packet, 6454, universeConfig.broadcastIP, (error) => {
         if (error) {
           console.error('Failed to send Art-Net packet:', error);
-        } else {
-          console.log('Art-Net packet sent successfully to', universeConfig.broadcastIP + ':6454');
         }
       });
       
-      // Also send to test port 6455 for debugging
       artnetSocket.send(packet, 6455, universeConfig.broadcastIP, (error) => {
         if (!error) {
           console.log('Debug packet also sent to port 6455');
@@ -282,8 +286,6 @@ function broadcastDMX() {
     } catch (error) {
       console.error('Failed to create/send Art-Net packet:', error);
     }
-  } else {
-    console.warn('Art-Net socket not initialized, cannot send data');
   }
   
   wss.clients.forEach((client) => {
@@ -296,7 +298,6 @@ function broadcastDMX() {
   });
 }
 
-// Apply a set of channel values with optional fade
 function applyChannelValuesWithFade(channelTargets, fadeMs = 0) {
   if (!Array.isArray(channelTargets) || channelTargets.length === 0) return;
   const clampedTargets = channelTargets.map(({ channel, value }) => ({
@@ -338,14 +339,46 @@ function applyChannelValuesWithFade(channelTargets, fadeMs = 0) {
   }, tickMs);
 }
 
+// Input validation middleware
+const { body, param, validationResult } = require('express-validator');
+
+function validateRequest(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+  }
+  next();
+}
+
+// Sanitize string inputs
+function sanitizeString(value) {
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .trim();
+}
+
+// Fixture Templates
 app.get('/api/fixture-templates', (req, res) => {
   res.json(fixtureTemplates);
 });
 
-app.post('/api/fixture-templates', (req, res) => {
+app.post('/api/fixture-templates', [
+  body('name').trim().isLength({ min: 1, max: 100 }).escape(),
+  body('manufacturer').trim().optional().isLength({ max: 100 }).escape(),
+  body('model').trim().optional().isLength({ max: 100 }).escape(),
+  body('channelCount').isInt({ min: 1, max: 512 }),
+  body('channels').optional().isArray()
+], validateRequest, (req, res) => {
   const template = {
     id: uuidv4(),
-    ...req.body,
+    name: sanitizeString(req.body.name),
+    manufacturer: req.body.manufacturer ? sanitizeString(req.body.manufacturer) : undefined,
+    model: req.body.model ? sanitizeString(req.body.model) : undefined,
+    channelCount: req.body.channelCount,
+    channels: req.body.channels || [],
     createdAt: new Date().toISOString()
   };
   const savedTemplate = db.insert('fixture_templates', template);
@@ -353,37 +386,50 @@ app.post('/api/fixture-templates', (req, res) => {
   res.json(savedTemplate);
 });
 
-app.put('/api/fixture-templates/:id', (req, res) => {
-  const updatedTemplate = db.update('fixture_templates', req.params.id, req.body);
+app.put('/api/fixture-templates/:id', [
+  param('id').isUUID()
+], validateRequest, (req, res) => {
+  const updatedTemplate = db.update('fixture_templates', req.params.id, {
+    ...req.body,
+    name: req.body.name ? sanitizeString(req.body.name) : undefined,
+    manufacturer: req.body.manufacturer ? sanitizeString(req.body.manufacturer) : undefined,
+    model: req.body.model ? sanitizeString(req.body.model) : undefined,
+    updatedAt: new Date().toISOString()
+  });
   if (!updatedTemplate) {
     return res.status(404).json({ error: 'Template not found' });
   }
-  
   fixtureTemplates = db.find('fixture_templates');
   res.json(updatedTemplate);
 });
 
-app.delete('/api/fixture-templates/:id', (req, res) => {
+app.delete('/api/fixture-templates/:id', [
+  param('id').isUUID()
+], validateRequest, (req, res) => {
   const deleted = db.delete('fixture_templates', req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Template not found' });
   }
-  
   fixtureTemplates = db.find('fixture_templates');
   res.json({ message: 'Template deleted' });
 });
 
+// Patches
 app.get('/api/patches', (req, res) => {
   res.json(patches);
 });
 
-app.post('/api/patches', (req, res) => {
+app.post('/api/patches', [
+  body('name').optional().trim().isLength({ max: 100 }).escape(),
+  body('templateId').isUUID(),
+  body('universe').isInt({ min: 0, max: 32767 }),
+  body('startAddress').isInt({ min: 1, max: 512 })
+], validateRequest, (req, res) => {
   const template = fixtureTemplates.find(t => t.id === req.body.templateId);
   if (!template) {
     return res.status(400).json({ error: 'Template not found' });
   }
 
-  // Check for address conflicts
   if (hasAddressConflict(req.body.universe, req.body.startAddress, template.channelCount)) {
     return res.status(400).json({ 
       error: `Address conflict: Channels ${req.body.startAddress}-${req.body.startAddress + template.channelCount - 1} are already in use`
@@ -392,7 +438,10 @@ app.post('/api/patches', (req, res) => {
 
   const patch = {
     id: uuidv4(),
-    ...req.body,
+    name: req.body.name ? sanitizeString(req.body.name) : undefined,
+    templateId: req.body.templateId,
+    universe: req.body.universe,
+    startAddress: req.body.startAddress,
     createdAt: new Date().toISOString()
   };
   const savedPatch = db.insert('patches', patch);
@@ -400,13 +449,18 @@ app.post('/api/patches', (req, res) => {
   res.json(savedPatch);
 });
 
-app.put('/api/patches/:id', (req, res) => {
+app.put('/api/patches/:id', [
+  param('id').isUUID(),
+  body('name').optional().trim().isLength({ max: 100 }).escape(),
+  body('templateId').optional().isUUID(),
+  body('universe').optional().isInt({ min: 0, max: 32767 }),
+  body('startAddress').optional().isInt({ min: 1, max: 512 })
+], validateRequest, (req, res) => {
   const existingPatch = patches.find(p => p.id === req.params.id);
   if (!existingPatch) {
     return res.status(404).json({ error: 'Patch not found' });
   }
 
-  // If updating template or address, check for conflicts
   if (req.body.templateId || req.body.startAddress !== undefined || req.body.universe !== undefined) {
     const templateId = req.body.templateId || existingPatch.templateId;
     const startAddress = req.body.startAddress !== undefined ? req.body.startAddress : existingPatch.startAddress;
@@ -424,55 +478,56 @@ app.put('/api/patches/:id', (req, res) => {
     }
   }
 
-  const updatedPatch = db.update('patches', req.params.id, req.body);
+  const updatedPatch = db.update('patches', req.params.id, {
+    ...req.body,
+    name: req.body.name ? sanitizeString(req.body.name) : undefined,
+    updatedAt: new Date().toISOString()
+  });
   patches = db.find('patches');
   res.json(updatedPatch);
 });
 
-app.delete('/api/patches/:id', (req, res) => {
+app.delete('/api/patches/:id', [
+  param('id').isUUID()
+], validateRequest, (req, res) => {
   const deleted = db.delete('patches', req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Patch not found' });
   }
-  
   patches = db.find('patches');
   res.json({ message: 'Patch deleted' });
 });
 
-// Bulk patch creation endpoint
-app.post('/api/patches/bulk', (req, res) => {
-  const { templateId, universe, quantity, baseName, startAddress } = req.body;
-  
-  if (!templateId || universe === undefined || !quantity || quantity < 1) {
-    return res.status(400).json({ error: 'Missing required fields: templateId, universe, quantity' });
-  }
-
-  const template = fixtureTemplates.find(t => t.id === templateId);
+app.post('/api/patches/bulk', [
+  body('templateId').isUUID(),
+  body('universe').isInt({ min: 0, max: 32767 }),
+  body('quantity').isInt({ min: 1, max: 512 }),
+  body('baseName').optional().trim().isLength({ max: 100 }).escape(),
+  body('startAddress').optional().isInt({ min: 1, max: 512 })
+], validateRequest, (req, res) => {
+  const template = fixtureTemplates.find(t => t.id === req.body.templateId);
   if (!template) {
     return res.status(400).json({ error: 'Template not found' });
   }
 
-  // Find available addresses
-  const addressResult = findAvailableAddresses(universe, templateId, quantity, startAddress);
+  const addressResult = findAvailableAddresses(req.body.universe, req.body.templateId, req.body.quantity, req.body.startAddress);
   if (addressResult.error) {
     return res.status(400).json(addressResult);
   }
 
-  // Create patches
   const createdPatches = [];
   const timestamp = new Date().toISOString();
-  
+
   addressResult.addresses.forEach((address, index) => {
-    const patchName = baseName ? `${baseName} ${index + 1}` : `${template.name} ${index + 1}`;
+    const patchName = req.body.baseName ? `${sanitizeString(req.body.baseName)} ${index + 1}` : `${template.name} ${index + 1}`;
     const patch = {
       id: uuidv4(),
       name: patchName,
-      templateId,
-      universe,
+      templateId: req.body.templateId,
+      universe: req.body.universe,
       startAddress: address,
       createdAt: timestamp
     };
-    
     const savedPatch = db.insert('patches', patch);
     createdPatches.push(savedPatch);
   });
@@ -484,20 +539,19 @@ app.post('/api/patches/bulk', (req, res) => {
   });
 });
 
-// Address availability check endpoint
-app.post('/api/patches/check-addresses', (req, res) => {
-  const { templateId, universe, quantity, startAddress } = req.body;
-  
-  console.log('Address availability check request:', { templateId, universe, quantity, startAddress });
-  
-  const template = fixtureTemplates.find(t => t.id === templateId);
+app.post('/api/patches/check-addresses', [
+  body('templateId').isUUID(),
+  body('universe').isInt({ min: 0, max: 32767 }),
+  body('quantity').isInt({ min: 1, max: 512 }),
+  body('startAddress').optional().isInt({ min: 1, max: 512 })
+], validateRequest, (req, res) => {
+  const template = fixtureTemplates.find(t => t.id === req.body.templateId);
   if (!template) {
     return res.status(400).json({ error: 'Template not found' });
   }
 
-  const addressResult = findAvailableAddresses(universe, templateId, quantity, startAddress);
-  console.log('Address availability result:', addressResult);
-  
+  const addressResult = findAvailableAddresses(req.body.universe, req.body.templateId, req.body.quantity, req.body.startAddress);
+
   if (addressResult.error) {
     return res.status(200).json({
       canFit: false,
@@ -513,21 +567,29 @@ app.post('/api/patches/check-addresses', (req, res) => {
   });
 });
 
-// Get used addresses for a universe
-app.get('/api/patches/used-addresses/:universe', (req, res) => {
+app.get('/api/patches/used-addresses/:universe', [
+  param('universe').isInt({ min: 0, max: 32767 })
+], validateRequest, (req, res) => {
   const universe = parseInt(req.params.universe);
   const usedRanges = getUsedAddresses(universe);
   res.json({ usedRanges });
 });
 
+// Groups
 app.get('/api/groups', (req, res) => {
   res.json(groups);
 });
 
-app.post('/api/groups', (req, res) => {
+app.post('/api/groups', [
+  body('name').trim().isLength({ min: 1, max: 100 }).escape(),
+  body('fixtureIds').optional().isArray(),
+  body('color').optional().isLength({ max: 20 }).escape()
+], validateRequest, (req, res) => {
   const group = {
     id: uuidv4(),
-    ...req.body,
+    name: sanitizeString(req.body.name),
+    fixtureIds: req.body.fixtureIds || [],
+    color: req.body.color || '#007bff',
     createdAt: new Date().toISOString()
   };
   const savedGroup = db.insert('groups', group);
@@ -535,35 +597,54 @@ app.post('/api/groups', (req, res) => {
   res.json(savedGroup);
 });
 
-app.put('/api/groups/:id', (req, res) => {
-  const updatedGroup = db.update('groups', req.params.id, req.body);
+app.put('/api/groups/:id', [
+  param('id').isUUID(),
+  body('name').optional().trim().isLength({ max: 100 }).escape(),
+  body('fixtureIds').optional().isArray(),
+  body('color').optional().isLength({ max: 20 }).escape()
+], validateRequest, (req, res) => {
+  const updatedGroup = db.update('groups', req.params.id, {
+    ...req.body,
+    name: req.body.name ? sanitizeString(req.body.name) : undefined,
+    color: req.body.color || undefined,
+    updatedAt: new Date().toISOString()
+  });
   if (!updatedGroup) {
     return res.status(404).json({ error: 'Group not found' });
   }
-  
   groups = db.find('groups');
   res.json(updatedGroup);
 });
 
-app.delete('/api/groups/:id', (req, res) => {
+app.delete('/api/groups/:id', [
+  param('id').isUUID()
+], validateRequest, (req, res) => {
   const deleted = db.delete('groups', req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Group not found' });
   }
-  
   groups = db.find('groups');
   res.json({ message: 'Group deleted' });
 });
 
-// Preset endpoints
+// Presets
 app.get('/api/presets', (req, res) => {
   res.json(presets);
 });
 
-app.post('/api/presets', (req, res) => {
+app.post('/api/presets', [
+  body('name').trim().isLength({ min: 1, max: 100 }).escape(),
+  body('channelValues').isArray({ min: 1 }),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const preset = {
     id: uuidv4(),
-    ...req.body,
+    name: sanitizeString(req.body.name),
+    channelValues: req.body.channelValues.filter(cv => 
+      cv.channel >= 1 && cv.channel <= 512 && 
+      cv.value >= 0 && cv.value <= 255
+    ),
+    fadeMs: req.body.fadeMs || 0,
     createdAt: new Date().toISOString()
   };
   const savedPreset = db.insert('presets', preset);
@@ -571,31 +652,43 @@ app.post('/api/presets', (req, res) => {
   res.json(savedPreset);
 });
 
-app.put('/api/presets/:id', (req, res) => {
+app.put('/api/presets/:id', [
+  param('id').isUUID(),
+  body('name').optional().trim().isLength({ max: 100 }).escape(),
+  body('channelValues').optional().isArray(),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const updatedPreset = db.update('presets', req.params.id, {
     ...req.body,
+    name: req.body.name ? sanitizeString(req.body.name) : undefined,
+    channelValues: req.body.channelValues ? req.body.channelValues.filter(cv => 
+      cv.channel >= 1 && cv.channel <= 512 && 
+      cv.value >= 0 && cv.value <= 255
+    ) : undefined,
     updatedAt: new Date().toISOString()
   });
   if (!updatedPreset) {
     return res.status(404).json({ error: 'Preset not found' });
   }
-  
   presets = db.find('presets');
   res.json(updatedPreset);
 });
 
-app.delete('/api/presets/:id', (req, res) => {
+app.delete('/api/presets/:id', [
+  param('id').isUUID()
+], validateRequest, (req, res) => {
   const deleted = db.delete('presets', req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Preset not found' });
   }
-  
   presets = db.find('presets');
   res.json({ message: 'Preset deleted' });
 });
 
-// Apply preset endpoint
-app.post('/api/presets/:id/apply', (req, res) => {
+app.post('/api/presets/:id/apply', [
+  param('id').isUUID(),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const preset = presets.find(p => p.id === req.params.id);
   if (!preset) {
     return res.status(404).json({ error: 'Preset not found' });
@@ -617,8 +710,10 @@ app.post('/api/presets/:id/apply', (req, res) => {
   });
 });
 
-// Clear a preset (set its channels to 0) with optional fade
-app.post('/api/presets/:id/clear', (req, res) => {
+app.post('/api/presets/:id/clear', [
+  param('id').isUUID(),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const preset = presets.find(p => p.id === req.params.id);
   if (!preset) {
     return res.status(404).json({ error: 'Preset not found' });
@@ -640,52 +735,37 @@ app.post('/api/presets/:id/clear', (req, res) => {
   });
 });
 
-app.get('/api/universe-config', (req, res) => {
-  res.json(universeConfig);
-});
-
-app.post('/api/universe-config', (req, res) => {
-  universeConfig = { ...universeConfig, ...req.body };
-  db.saveUniverseConfig(universeConfig);
-  initializeArtnet();
-  res.json(universeConfig);
-});
-
-app.post('/api/dmx/set-channel', (req, res) => {
-  const { channel, value } = req.body;
-  
-  console.log(`Setting DMX channel ${channel} to value ${value}`);
-  
-  if (channel < 1 || channel > 512 || value < 0 || value > 255) {
-    console.error('Invalid channel or value:', { channel, value });
-    return res.status(400).json({ error: 'Invalid channel or value' });
-  }
-  
-  dmxValues[channel - 1] = value;
+// DMX Control
+app.post('/api/dmx/set-channel', [
+  body('channel').isInt({ min: 1, max: 512 }),
+  body('value').isInt({ min: 0, max: 255 })
+], validateRequest, (req, res) => {
+  dmxValues[req.body.channel - 1] = req.body.value;
   db.saveDmxValues(dmxValues);
   broadcastDMX();
-  res.json({ channel, value });
+  res.json({ channel: req.body.channel, value: req.body.value });
 });
 
-app.post('/api/dmx/set-multiple', (req, res) => {
-  const { channels, fadeMs } = req.body;
-  
-  if (fadeMs && fadeMs > 0) {
-    // Use fade functionality
-    const targets = channels
-      .filter(({ channel, value }) => channel >= 1 && channel <= 512 && value >= 0 && value <= 255)
-      .map(({ channel, value }) => ({ channel, value }));
-    
-    applyChannelValuesWithFade(targets, fadeMs);
-    res.json({ message: 'Channels updated with fade', fadeMs });
+app.post('/api/dmx/set-multiple', [
+  body('channels').isArray({ min: 1, max: 512 }),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
+  const validChannels = req.body.channels.filter(({ channel, value }) => 
+    channel >= 1 && channel <= 512 && value >= 0 && value <= 255
+  );
+
+  if (validChannels.length === 0) {
+    return res.status(400).json({ error: 'No valid channels provided' });
+  }
+
+  if (req.body.fadeMs && req.body.fadeMs > 0) {
+    const targets = validChannels.map(({ channel, value }) => ({ channel, value }));
+    applyChannelValuesWithFade(targets, req.body.fadeMs);
+    res.json({ message: 'Channels updated with fade', fadeMs: req.body.fadeMs });
   } else {
-    // Instant update (existing behavior)
-    for (const { channel, value } of channels) {
-      if (channel >= 1 && channel <= 512 && value >= 0 && value <= 255) {
-        dmxValues[channel - 1] = value;
-      }
+    for (const { channel, value } of validChannels) {
+      dmxValues[channel - 1] = value;
     }
-    
     db.saveDmxValues(dmxValues);
     broadcastDMX();
     res.json({ message: 'Channels updated' });
@@ -696,8 +776,9 @@ app.get('/api/dmx/values', (req, res) => {
   res.json(dmxValues);
 });
 
-// Blackout all DMX channels with optional fade
-app.post('/api/dmx/blackout', (req, res) => {
+app.post('/api/dmx/blackout', [
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : 0;
   const targets = dmxValues
     .map((value, idx) => ({ channel: idx + 1, value: 0 }))
@@ -707,8 +788,9 @@ app.post('/api/dmx/blackout', (req, res) => {
   res.json({ message: 'Blackout initiated', fadeMs: requestedFade });
 });
 
-// Clear all DMX channels (alias of blackout) with optional fade
-app.post('/api/dmx/clear-all', (req, res) => {
+app.post('/api/dmx/clear-all', [
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const requestedFade = typeof req.body?.fadeMs === 'number' ? req.body.fadeMs : 0;
   const targets = dmxValues
     .map((value, idx) => ({ channel: idx + 1, value: 0 }))
@@ -718,58 +800,45 @@ app.post('/api/dmx/clear-all', (req, res) => {
   res.json({ message: 'Clear all initiated', fadeMs: requestedFade });
 });
 
-// Virtual Console API endpoints for external control
-app.post('/api/virtual-console/button/trigger', (req, res) => {
-  const { buttonId, action, fadeMs } = req.body;
-  
-  if (!buttonId || !action) {
-    return res.status(400).json({ error: 'buttonId and action are required' });
-  }
-  
-  if (!['activate', 'deactivate', 'toggle'].includes(action)) {
-    return res.status(400).json({ error: 'action must be "activate", "deactivate", or "toggle"' });
-  }
-  
-  // This endpoint serves as a webhook for external applications
-  // The actual button state is managed by the frontend virtual console
-  // We broadcast the button trigger event via WebSocket for the frontend to handle
-  
+// Virtual Console
+app.post('/api/virtual-console/button/trigger', [
+  body('buttonId').trim().isLength({ min: 1, max: 100 }).escape(),
+  body('action').isIn(['activate', 'deactivate', 'toggle']),
+  body('fadeMs').optional().isInt({ min: 0, max: 60000 })
+], validateRequest, (req, res) => {
   const message = {
     type: 'virtual_console_button_trigger',
     data: {
-      buttonId,
-      action,
-      fadeMs: fadeMs || undefined,
+      buttonId: req.body.buttonId,
+      action: req.body.action,
+      fadeMs: req.body.fadeMs || undefined,
       timestamp: Date.now()
     }
   };
-  
-  // Broadcast to all connected WebSocket clients (including the virtual console)
+
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(message));
     }
   });
-  
+
   res.json({ 
-    message: `Button ${action} signal sent`,
-    buttonId,
-    action,
-    fadeMs: fadeMs || undefined
+    message: `Button ${req.body.action} signal sent`,
+    buttonId: req.body.buttonId,
+    action: req.body.action,
+    fadeMs: req.body.fadeMs || undefined
   });
 });
 
-// Virtual console persistence endpoints
 app.get('/api/virtual-console/layout', (req, res) => {
   return res.json(virtualConsoleLayout);
 });
 
-app.post('/api/virtual-console/layout', (req, res) => {
-  const layout = req.body;
-  if (!layout || typeof layout !== 'object' || !Array.isArray(layout.buttons) || !Array.isArray(layout.faders)) {
-    return res.status(400).json({ error: 'Invalid layout format' });
-  }
-  virtualConsoleLayout = layout;
+app.post('/api/virtual-console/layout', [
+  body('buttons').isArray(),
+  body('faders').isArray()
+], validateRequest, (req, res) => {
+  virtualConsoleLayout = req.body;
   db.saveVirtualConsoleLayout(virtualConsoleLayout);
   return res.json({ message: 'Layout saved' });
 });
@@ -778,16 +847,16 @@ app.get('/api/virtual-console/states', (req, res) => {
   return res.json(virtualConsoleStates);
 });
 
-app.post('/api/virtual-console/states', (req, res) => {
-  const states = req.body;
-  if (!states || typeof states !== 'object' || !states.buttons || !states.faders) {
-    return res.status(400).json({ error: 'Invalid states format' });
-  }
-  virtualConsoleStates = states;
+app.post('/api/virtual-console/states', [
+  body('buttons').isObject(),
+  body('faders').isObject()
+], validateRequest, (req, res) => {
+  virtualConsoleStates = req.body;
   db.saveVirtualConsoleStates(virtualConsoleStates);
   return res.json({ message: 'States saved' });
 });
 
+// WebSocket authentication
 wss.on('connection', (ws) => {
   console.log('WebSocket client connected');
   
@@ -795,21 +864,29 @@ wss.on('connection', (ws) => {
     type: 'connection_established',
     data: { message: 'Connected to LuminetDMX' }
   }));
-  
+
   ws.on('close', () => {
     console.log('WebSocket client disconnected');
   });
 });
 
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// Initialize Art-Net
 initializeArtnet();
 
-// Serve built frontend from /app/public if present
+// Serve built frontend
 const publicDir = path.join(__dirname, 'public');
 if (fs.existsSync(publicDir)) {
-  // Static assets
   app.use(express.static(publicDir));
 
-  // SPA fallback for non-API routes
   app.get(/^(?!\/api).*$/, (req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
   });
@@ -818,4 +895,5 @@ if (fs.existsSync(publicDir)) {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`LuminetDMX Backend running on port ${PORT}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
 });

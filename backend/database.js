@@ -5,6 +5,19 @@ class FileDatabase {
   constructor(dataDir = './data') {
     this.dataDir = dataDir;
     this.ensureDataDir();
+    
+    // Cache for collections to avoid reloading from disk
+    this.cache = {
+      fixture_templates: null,
+      patches: null,
+      groups: null,
+      presets: null
+    };
+    
+    // Lock file for write operations
+    this.lockFile = path.join(this.dataDir, '.lock');
+    this.writeQueue = [];
+    this.isWriting = false;
   }
 
   ensureDataDir() {
@@ -18,13 +31,21 @@ class FileDatabase {
     return path.join(this.dataDir, `${collection}.json`);
   }
 
+  // Load collection from cache or disk
   loadCollection(collection, defaultData = []) {
+    // Return from cache if available
+    if (this.cache[collection] !== null) {
+      return this.cache[collection];
+    }
+    
     const filePath = this.getFilePath(collection);
     try {
       if (fs.existsSync(filePath)) {
         const data = fs.readFileSync(filePath, 'utf8');
         const parsed = JSON.parse(data);
         console.log(`Loaded ${collection}: ${parsed.length} items`);
+        // Cache the data
+        this.cache[collection] = parsed;
         return parsed;
       } else {
         console.log(`No existing data file for ${collection}, using defaults`);
@@ -37,16 +58,88 @@ class FileDatabase {
     }
   }
 
+  // Save collection to disk and invalidate cache
   saveCollection(collection, data) {
     const filePath = this.getFilePath(collection);
     try {
       const jsonData = JSON.stringify(data, null, 2);
       fs.writeFileSync(filePath, jsonData, 'utf8');
       console.log(`Saved ${collection}: ${data.length} items`);
+      // Invalidate cache
+      this.cache[collection] = null;
       return true;
     } catch (error) {
       console.error(`Error saving ${collection}:`, error);
       return false;
+    }
+  }
+
+  // Acquire lock for write operations
+  async acquireLock() {
+    const maxAttempts = 10;
+    const delay = 100;
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        if (!fs.existsSync(this.lockFile)) {
+          fs.writeFileSync(this.lockFile, process.pid.toString(), 'utf8');
+          return true;
+        }
+        // Check if lock is stale (process not running)
+        const pid = fs.readFileSync(this.lockFile, 'utf8');
+        try {
+          process.kill(parseInt(pid), 0);
+        } catch (e) {
+          // Process doesn't exist, remove stale lock
+          fs.unlinkSync(this.lockFile);
+          continue;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } catch (error) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return false;
+  }
+
+  // Release lock
+  releaseLock() {
+    try {
+      if (fs.existsSync(this.lockFile)) {
+        const pid = fs.readFileSync(this.lockFile, 'utf8');
+        if (parseInt(pid) === process.pid) {
+          fs.unlinkSync(this.lockFile);
+        }
+      }
+    } catch (error) {
+      console.error('Error releasing lock:', error);
+    }
+  }
+
+  // Queue write operations to prevent corruption
+  async queueWrite(operation) {
+    return new Promise((resolve, reject) => {
+      this.writeQueue.push({ operation, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  async processQueue() {
+    if (this.isWriting || this.writeQueue.length === 0) {
+      return;
+    }
+    
+    this.isWriting = true;
+    const { operation, resolve, reject } = this.writeQueue.shift();
+    
+    try {
+      const result = await operation();
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    } finally {
+      this.isWriting = false;
+      setImmediate(() => this.processQueue());
     }
   }
 
